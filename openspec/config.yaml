@@ -1,0 +1,47 @@
+schema: spec-driven
+
+context: |
+  Plataforma GraphRAG local (RAG + knowledge graph), monólito modular:
+  Java 25, Spring Boot 4.1.0, Spring AI 2.0, Spring Modulith, Maven single-module.
+  Módulos: api / rag / chat (placeholder) / mcp / shared — pipeline de ingestão
+  100% event-driven; api→rag e mcp→rag são as únicas dependências diretas.
+  Infra 100% local e gratuita via compose.yaml (Postgres, Neo4j, OpenSearch,
+  MinIO+JuiceFS+Redis, Ollama, Docling, LGTM; Keycloak/ClamAV/NATS/GLiNER por épico).
+
+  Hierarquia de documentação (ordem de autoridade — cronologia real:
+  rag-plan veio primeiro; depois RF/RNF; depois BDD; depois SDD):
+  - docs/requisitos.md — O QUÊ: RF01–RF39 + RNF01–04; fonte principal,
+    nenhum escopo existe fora deles.
+  - src/test/resources/features/ — QUANDO PRONTO: 23 features Gherkin pt-BR
+    derivadas dos RFs, tags @RFxx, todas @pendente; runner filtra `not @pendente`.
+  - docs/sdd.md + docs/sdd/ — COMO: o design mais recente; dados.md SUBSTITUI
+    a seção 7 do rag-plan.
+  - docs/adr/ — POR QUÊ: decisões pontuais.
+  - docs/rag-plan.md — só ORDEM dos épicos/tarefas [N.M]; doc mais antigo,
+    detalhes técnicos nele podem estar desatualizados — conferir no SDD/repositório.
+
+  Papel do OpenSpec neste projeto: camada de EXECUÇÃO do backlog.
+  - Um change por épico do rag-plan.md.
+  - openspec/specs/ NÃO duplica requisitos.md: cresce só via archive e registra
+    o que está de fato implementado.
+  - Definition of Done imutável de qualquer tarefa que implementa RF: os cenários
+    @RFxx correspondentes passam com a tag @pendente removida + ModularityTest verde.
+
+  Convenções de código: records para dados; Lombok @RequiredArgsConstructor em
+  serviços; var em locais; erros via ApplicationError/HttpApplicationError
+  (ProblemDetail RFC 9457, `code` estável usado pelos BDDs); logging só pelo
+  Logger/LoggerFactory do módulo shared. Idioma dos artefatos: pt-BR.
+
+rules:
+  proposal:
+    - Referenciar o épico e as tarefas [N.M] do docs/rag-plan.md que o change cobre
+    - Não inventar escopo fora dos RFs; citar os RFxx envolvidos
+  specs:
+    - Cada requirement cita os RFxx e o arquivo .feature que o valida
+    - Não reescrever os cenários Gherkin — resumir WHEN/THEN e apontar para a feature
+  design:
+    - Apontar para o documento docs/sdd/*.md correspondente em vez de copiá-lo;
+      registrar aqui apenas decisões novas tomadas durante o change
+  tasks:
+    - Espelhar a ordenação [N.M] do rag-plan.md, mas puxar todo detalhe técnico
+      (schemas, DoDs, caminhos) do SDD e do repositório, nunca do plano

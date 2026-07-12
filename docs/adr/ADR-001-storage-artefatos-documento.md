@@ -1,7 +1,7 @@
 # ADR-001: Armazenamento de Artefatos de Documento — Cold Storage por Estágio, Não Texto em Banco Relacional
 
 ## Status
-Aceito
+Aceito — com adendo (julho/2026, ver seção final)
 
 ## Contexto
 
@@ -73,3 +73,19 @@ Também ficou definido, como decisão de produto explícita, que **os artefatos 
 3. Estender a tabela `documents` (Flyway, Épico 1.5) com `raw_storage_key`, `transformed_storage_key`, `sanitized_storage_key` e `extracted_text_length`, substituindo o `storage_path` genérico da v1 do plano.
 4. Fazer o pipeline de ingestão (Épicos 2–3) efetivamente chamar `DocumentStorage.store(...)` em cada estágio e persistir a referência retornada.
 5. Reavaliar esta ADR se surgir um consumidor real que precise consultar texto completo via SQL — hoje nenhum existe.
+
+---
+
+## Adendo (Julho/2026) — vocabulário de estágios revisado pelo SDD
+
+A consolidação dos requisitos (`docs/requisitos.md`) e o SDD (`docs/sdd/`) alteraram dois pontos desta ADR — a decisão central (cold storage por estágio atrás do port `DocumentStorage`, conteúdo de documento fora do Postgres) permanece válida:
+
+1. **`SANITIZED` sai do vocabulário** — a etapa de sanitização/mascaramento de PII era do plano antigo e não tem RF correspondente (hoje é "melhoria futura" no `rag-plan.md` §10). O texto que alimenta o chunking é o `TRANSFORMED` (Markdown normalizado, RF16).
+2. **`EXTRACTED` entra no vocabulário** — artefato intermediário da extração, gravado antes da normalização (`sdd/extracao-e-vetorial.md` §2). Motivo: RF27 (recuperação parcial) — se `TRANSFORMING` falhar, o retry não pode repetir OCR, a etapa mais cara do pipeline.
+
+Vocabulário vigente: `DocumentStage` = **`RAW`, `EXTRACTED`, `TRANSFORMED`**. As chaves incorporam a segregação do RF05: `/{tenantId}/{userId}/{raw|extracted|transformed}/{fileId}/…`.
+
+Notas de coerência:
+
+- Os itens 1–2 do Plano de Ação constavam "Feito", mas o código foi removido no reset do domínio (ver `rag-plan.md` §5) — a decisão permanece; a implementação será refeita nos Épicos 1 e 4.
+- O item 5 da Decisão ("chunking não produz artefato no `DocumentStorage`") permanece, com uma precisão do SDD: os chunks têm repositório autoritativo na tabela `chunks` do Postgres (`sdd/dados.md`) — texto **segmentado** com padrão de acesso transacional (retry de embedding, composição de contexto), o que não contradiz o item 4 ("Postgres nunca guarda o conteúdo do texto"), que trata do texto **completo** do documento.

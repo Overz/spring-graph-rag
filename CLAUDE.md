@@ -4,27 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**What it is:** a single-module Maven project implementing a local RAG (Retrieval-Augmented Generation) system, built as a **modular monolith** on Spring AI 2.0.0 + Spring Boot 4.1.0 + Java 25, with domain boundaries enforced by Spring Modulith.
+**What it is:** a single-module Maven project implementing a local **GraphRAG platform** (Retrieval-Augmented Generation + knowledge graph), built as a **modular monolith** on Spring AI 2.0 + Spring Boot 4.1.0 + Java 25, with domain boundaries enforced by Spring Modulith.
 
-**What it's for:** a learning project that simulates a real-world, multi-layered, observable, testable RAG architecture — 100% local and free, without relying on paid external APIs (see `docs/rag-plan.md` for the full product plan and rationale).
+**What it's for:** a learning project that simulates a real-world, multitenant, event-driven, resilient, observable architecture — 100% local and free, no paid APIs.
 
-**What it does:** ingests documents, turns them into searchable vectors + full-text + a knowledge graph, and answers natural-language questions grounded in that content — citing sources and, where relevant, tracing multi-hop relationships between business entities.
+**What it does:** ingests files (PDF, images, CSV, JSON, XML, TXT, MD) through an async fork-join pipeline (extraction/OCR → Markdown → hierarchical chunking → embeddings ‖ knowledge graph), then answers natural-language questions by fusing vector search and graph traversal (RRF), citing sources — via REST and MCP tools, always under strict tenant isolation.
 
-> `docs/rag-plan.md` is the canonical backlog: 17 épicos, each with atomic tasks `[N.M]`, a Definition of Done, and the stack each task relies on. This file (`CLAUDE.md`) documents *what the architecture is and why*; it does not duplicate the backlog — check the plan for task-level detail and sequencing.
+### Documentation hierarchy (read in this order)
+
+| Document | Answers | Role |
+|---|---|---|
+| `docs/requisitos.md` | **what** | Source of truth: RF01–RF39 + RNF01–04. No scope exists outside them. |
+| `docs/rag-plan.md` | **in which order/pieces** | Épicos 0–10, tasks `[N.M]`. Oldest doc in the chain (pre-dates the SDD): use it for ordering only — technical detail in it may be stale; the SDD supersedes it (e.g. `sdd/dados.md` replaces its §7). |
+| `docs/sdd.md` + `docs/sdd/` | **how** | Software Design Document: C4 (up to C3), contracts, data models, and the Architecture Decision Log (ADL-001..010). |
+| `docs/adr/` | **why** | Point-in-time architecture decisions (ADR-001 storage — amended, ADR-002 Docling, ADR-003 Ollama embeddings). |
+| `src/test/resources/features/` | **when it's done** | Executable acceptance criteria: 23 Gherkin (pt-BR) features tagged `@RFxx`. |
+
+Coherence rule: requirements beat everything; BDD and the SDD beat the plan (they were written after it, from the requirements); if code/`compose.yaml` diverge from docs on version/config detail, the repository wins and docs must be updated. Backlog execution state lives in `openspec/` (one change per épico), not in the plan.
 
 ### Current implementation stage
 
-> **Check `openspec status --change <name>` (or `openspec list`) for the authoritative, up-to-date task-level progress** — `openspec/changes/*/tasks.md` is the source of truth for what's done vs. pending per capability. This section is a narrative summary, kept accurate but coarser-grained.
+**Domain code was reset.** The earlier upload implementation was removed to restart guided by requirements + BDD. **No RF is implemented yet.** What exists today:
 
-The project has the full local infrastructure up and **Épico 1 (Ingestão de Documentos) implemented end to end**, inside the `foundation-and-ingestion-intake` OpenSpec change. Concretely today:
+- Module skeleton: `Application` + `api`/`chat`/`rag`/`mcp` (only `package-info.java` with `@ApplicationModule`) + `shared` with the project conventions (`ApplicationError`/`HttpApplicationError`, `Logger`/`LoggerFactory`/`Slf4JLogger`). `mvn compile` passes.
+- Full BDD suite: 23 features / ~150 scenarios, all tagged `@pendente` (runner `CucumberTest` filters `not @pendente` — build stays green with zero active scenarios). Skeleton steps in `com.github.overz.bdd.steps` throw `PendingException`.
+- Complete local infra in `compose.yaml` (see table below) and OTel instrumentation wired to the LGTM stack.
+- SDD complete (`docs/sdd/`), written from an architecture discovery session (July/2026).
 
-- Module skeleton (`api`, `chat`, `rag`, `mcp`, `shared`) has real code in `api` and `shared`; `chat`, `rag`, `mcp` are still just `package-info.java` with `@ApplicationModule` boundaries declared, verified by `ModularityTest`.
-- `compose.yaml` provisions the full stack: Postgres, Neo4j, OpenSearch, MinIO+Redis+JuiceFS, Ollama, Docling Serve, and the Grafana/OTel LGTM observability stack.
-- **Document upload (Épico 1) works end to end**: `POST /api/v1/documents` → MIME sniff (Tika) → SHA-256 dedup → raw file in cold storage (`DocumentStorage.store(RAW, ...)`) → `documents` row → `DocumentUploadedEvent` published. `GET /api/v1/documents/{id}/status` reads it back. See `com.github.overz.api` (public contract) and `com.github.overz.api.internal` (implementation).
-- Project-wide code conventions are established and in use — see "Code Conventions" below: immutability (records + `@RequiredArgsConstructor` + `var`), the `ApplicationError`/`HttpApplicationError` hierarchy, and the `Logger`/`AppLogs` centralized logging.
-- **Not yet implemented**: Épico 2 (document-parsing, module `rag`) — the listener for `DocumentUploadedEvent` doesn't exist yet, so uploaded documents stay at `PENDING` forever for now. `spring-ai-starter-model-ollama` is in `pom.xml` (added for embeddings, ADR-003), but no `ChatClient`/tool calling code exists yet — RAG generation and tool calling (Épicos 10/11) are still unimplemented.
-- `mvnw`/`mvnw.cmd` wrapper scripts are missing from the repo (only `.mvn/wrapper/maven-wrapper.properties` is committed) — regenerate with `mvn -N wrapper:wrapper` before relying on `./mvnw` commands below.
-- `TestcontainersConfiguration`'s Neo4j/Postgres beans are commented out: Testcontainers `2.0.5` made `Neo4jContainer`/`PostgreSQLContainer` non-generic, breaking the old `new Neo4jContainer<>(...)` pattern. Only the Grafana LGTM container bean is active; dev-mode (`spring-boot:test-run`) currently starts without a real Postgres/Neo4j until this is migrated to the new API.
+**Known debts (all tracked as Épico 0 tasks in `docs/rag-plan.md` §5–6):** missing `mvnw` wrapper scripts ([0.1] — regenerate with `mvn -N wrapper:wrapper`); `TestcontainersConfiguration` Postgres/Neo4j beans commented out pending Testcontainers 2.x API migration ([0.2]); port 3000 conflict between the app default and `grafana-lgtm` ([0.3]); Flyway `V1` follows the pre-requirements schema and must be rewritten ([0.4]); JuiceFS×MinIO credential mismatch in `compose.yaml` ([0.5]); Keycloak not yet provisioned ([0.7]); `chat-memory-repository-neo4j` dependency to be removed ([0.8]).
+
+> OpenSpec is planned as the backlog-execution layer (one change per épico, referencing the SDD) once implementation starts — the `openspec/` directory does not exist yet; don't reference `openspec` commands until it does.
 
 ## Build & Run Commands
 
@@ -32,7 +41,7 @@ The project has the full local infrastructure up and **Épico 1 (Ingestão de Do
 # Build
 ./mvnw clean package
 
-# Run tests (includes modularity verification)
+# Run tests (includes modularity verification + active BDD scenarios)
 ./mvnw test
 
 # Run a single test class
@@ -47,149 +56,99 @@ The project has the full local infrastructure up and **Épico 1 (Ingestão de Do
 
 ## Infrastructure
 
-**What it is:** a set of local services — provisioned either via `compose.yaml` (Spring Boot Docker Compose support starts them automatically) or, for tests, via `TestcontainersConfiguration`.
+Provisioned via `compose.yaml` (source of truth; Spring Boot Docker Compose support) or, for tests, `TestcontainersConfiguration`.
 
-**What it's for:** replacing every paid/external dependency (managed databases, hosted vector search, hosted LLM APIs) with an equivalent that runs entirely on the developer's machine.
+| Service | What it's for | Status |
+|---|---|---|
+| PostgreSQL 18.x (+ Adminer) | Metadata, lifecycle/history, errors, audit, quotas (Flyway); will also host the Keycloak schema | ✅ in `compose.yaml` (schema rewrite pending — [0.4]) |
+| Neo4j 5.26 Community | Knowledge graph: `Document`/`Chunk` (with `openSearchId`)/`Entity` (with aliases + name embeddings) | ✅ in `compose.yaml` |
+| OpenSearch 3.x (+ Dashboards) | Child-chunk index: k-NN + BM25 + tenant filter metadata | ✅ in `compose.yaml` |
+| MinIO + JuiceFS + Redis | Object storage mounted as POSIX (`DocumentStorage`, ADR-001; stages `RAW`/`EXTRACTED`/`TRANSFORMED`) | ✅ in `compose.yaml` (credential mismatch — [0.5]) |
+| Ollama (`qwen3:8b` + `nomic-embed-text`) | Chat/extraction LLM + embeddings, both resident (`OLLAMA_MAX_LOADED_MODELS=2`, ADR-003) | ✅ in `compose.yaml` |
+| Docling Serve (CPU) | PDF/image parsing, OCR, tables (ADR-002) | ✅ in `compose.yaml` |
+| Grafana OTel-LGTM | Traces/logs/metrics (deep observability postponed — Épico 10) | ✅ in `compose.yaml` (port 3000 conflict — [0.3]) |
+| Keycloak | AuthN: JWT, realm `graphrag` versioned as JSON, `tenantId` claim (ADL-008) | ⏳ Épico 0 ([0.7]) |
+| ClamAV | Malware scan before `UPLOADED` (RF02) | ⏳ Épico 1 ([1.3]) |
+| NATS | External messaging / fair queueing (RF12/RF39) | ⏳ Épico 3 ([3.4]) |
+| GLiNER sidecar | Zero-shot NER, labels = the RF21 ontology (ADL-006) | ⏳ Épico 6 ([6.1]) |
 
-| Service | What it is | What it's for | Status |
-|---|---|---|---|
-| `postgres:latest` | Relational database | Document metadata, pipeline status, tenant info (`knowledge_base`), migrated via Flyway | ✅ In `compose.yaml` |
-| `neo4j:latest` | Graph database | Chat memory persistence today; will also hold the business-entity knowledge graph (Épico 17) | ✅ In `compose.yaml` (`neo4j/notverysecret`) |
-| `grafana/otel-lgtm:latest` | Bundled observability stack (Grafana + Loki + Tempo + Mimir) | Traces, logs, and metrics for the whole ingestion/query journey | ✅ In `compose.yaml` (UI on port 3000) |
-| OpenSearch | Vector + full-text search engine | Stores chunk embeddings (k-NN) and BM25 full-text in one engine, enabling hybrid search | ⏳ Dependency present (`spring-ai-starter-vector-store-opensearch`); container not yet in `compose.yaml` (Épico 7) |
-| Ollama | Local LLM runtime | Serves the chat model (Qwen3, with tool calling) and the embedding model (`nomic-embed-text`), both resident together (`OLLAMA_MAX_LOADED_MODELS=2`) | ✅ In `compose.yaml`; `spring-ai-starter-model-ollama` dependency present (added for embeddings, ADR-003) — chat/tool-calling usage still not wired up (Épico 10/11) |
-| MinIO | S3-compatible object storage | Keeps the original uploaded file (PDF/DOCX/etc.) separate from its processed text, simulating a real bucket | ⏳ Planned — no dependency yet (Épico 1.4) |
-
-For tests, `TestcontainersConfiguration` is meant to spin up equivalent containers automatically (see the Neo4j/Postgres caveat above).
-
-The app listens on port `3000` by default (env: `APP_PORT`, `APP_HOST`).
+The app listens on port `3000` by default (`APP_PORT`, `APP_HOST`) — conflicts with `grafana-lgtm` until [0.3] is resolved.
 
 ## Architecture
 
 ### Modular Structure (Spring Modulith)
 
-**What it is:** one Spring Modulith module per top-level subpackage under `src/main/java/com/github/overz/`.
-
-**What it's for:** keeping the codebase a single deployable JAR while still enforcing the same boundaries a microservice split would — no module reaches into another's internals, all cross-module talk goes through events or declared public APIs.
-
 ```
 com.github.overz/
 ├── Application.java      ← @SpringBootApplication + @Modulithic
-│
-├── chat/                 ← What it does: conversational interface with the AI
-│   └── package-info.java    (WebSocket/HTTP chat, chat memory)
-│
-├── rag/                  ← What it does: full RAG pipeline
-│   └── package-info.java    (ingestion, embedding, vector store, retrieval, knowledge graph)
-│
-├── api/                  ← What it does: HTTP endpoints for external data ingestion
-│   └── package-info.java    (file uploads, structured data, REST)
-│
-├── mcp/                  ← What it does: MCP server (tool provider for AI agents)
-│   └── package-info.java    (tools/resources exposed via Model Context Protocol)
-│
-└── shared/               ← What it does: shared library (SHARED type — available to all modules)
-    └── package-info.java    (value objects, events, interfaces, utilities)
+├── api/                  ← HTTP entry: upload + validations, status/history, query REST, admin
+├── rag/                  ← the whole pipeline: extraction, chunking, embeddings, graph,
+│                            hybrid retrieval + RRF, generation, GC, reconciliation
+├── chat/                 ← placeholder — OUT OF SCOPE (ADL-007); extension points in docs/sdd/consulta.md
+├── mcp/                  ← MCP server: query/graph tools for external agents
+└── shared/               ← cross-module contracts: errors, logging, domain events,
+                             DocumentStorage port, CallerContext
 ```
 
-### Module Dependency Rules
+### Module Dependency Rules (per SDD)
 
-- `shared` → available to all modules implicitly (declared as `ApplicationModule.Type.SHARED`)
-- `chat`, `rag`, `api`, `mcp` → **no direct cross-module imports allowed**
-- Cross-module communication → via `ApplicationEventPublisher` (async domain events)
-- Each module may expose public APIs (interfaces in the module root) that others can use
+- `shared` → available to all modules (`ApplicationModule.Type.SHARED`).
+- `api → rag` and `mcp → rag` are the **only** direct cross-module dependencies, declared via `allowedDependencies` and restricted to `rag`'s public interfaces (`RagQueryApi`, `DocumentCommandApi`) — synchronous query/commands only.
+- The ingestion **pipeline is 100% event-driven**: `api` publishes, `rag` consumes (Modulith event publication registry, at-least-once). `rag` knows nobody.
+- Any `internal/` sub-package is private to its module.
+- `ModularityTest` (`ApplicationModules.verify()`) fails the build on violations and generates PlantUML docs into `target/modulith-docs/`.
 
-### Internal Packages
+## Code Conventions
 
-Any sub-package named `internal/` within a module is private to that module:
-
-```
-com.github.overz.rag/
-├── RagService.java          ← public API of the module
-└── internal/
-    └── PdfProcessor.java    ← private implementation, invisible to other modules
-```
-
-### Modularity Test
-
-**What it is:** `ModularityTest`, running `ApplicationModules.verify()` on every build (internally backed by ArchUnit via Spring Modulith — no separate ArchUnit dependency needed).
-
-**What it's for:** making module boundary violations a compile-time-equivalent failure instead of a code-review judgment call.
-
-**What it does:** fails the build if —
-
-- Any module imports a class from another module's `internal/` package
-- Any module imports from a module not listed in its `allowedDependencies`
-- Circular dependencies exist between modules
-
-It also generates architecture documentation (PlantUML diagrams) into `target/modulith-docs/`.
-
-### Code Conventions
-
-**What it is:** house rules for how new code in this repository is written — immutability, error hierarchy, logging.
-
-**What it's for:** consistency across modules without re-deciding style on every class; each rule below applies to *all* code written in this project, not just the module that introduced it.
+House rules for **all** code in this repository.
 
 **Immutability**
 
 - Data carriers (DTOs, value objects, domain events, request/response bodies) → `record`, always.
-- A record that needs more than its canonical constructor (builder-style construction, JSON deserialization via builder) → add Lombok on top (`@Builder`, `@Jacksonized`) instead of hand-writing that logic.
-- Services/components with injected dependencies → `private final` fields + Lombok `@RequiredArgsConstructor`. No field injection (`@Autowired` on a field), no setters, no mutable state after construction.
-- Local variables → `var` (or `final var` when never reassigned) everywhere. Don't spell out the type when the compiler already knows it.
+- A record needing builder-style construction/JSON via builder → Lombok (`@Builder`, `@Jacksonized`) instead of hand-written logic.
+- Services/components → `private final` fields + Lombok `@RequiredArgsConstructor`. No field injection, no setters, no mutable state after construction.
+- Local variables → `var` (or `final var`) everywhere.
 
 **Error Hierarchy (by Domain)**
 
-- `ApplicationError` (`shared`, abstract, extends `RuntimeException`) — root of every exception the app throws on purpose.
-- `HttpApplicationError` (`shared`, abstract, extends `ApplicationError`) — for errors that cross an HTTP boundary. Carries an `HttpStatus` and knows how to render itself as a `ProblemDetail` (RFC 9457) — no controller hand-builds an error body.
-- Concrete errors are grouped by domain through **package/module placement and naming**, not through a forced shared middle class: e.g., upload-validation errors (`UnsupportedFileTypeError`, `EmptyFileError`, `DocumentNotFoundError`) live in `api`, parsing errors live in `rag` — each extends `HttpApplicationError` or `ApplicationError` directly, per whether it's HTTP-facing.
-- A `@RestControllerAdvice` catches `HttpApplicationError` at the module's HTTP boundary and returns `error.toProblemDetail()` — one place per module, not per endpoint.
+- `ApplicationError` (`shared`, abstract, extends `RuntimeException`) — root of every deliberate exception.
+- `HttpApplicationError` (`shared`, abstract) — errors crossing an HTTP boundary; carries `HttpStatus` and renders itself as `ProblemDetail` (RFC 9457).
+- Concrete errors grouped by domain via package/module placement and naming (upload errors in `api`, parsing errors in `rag`), each with a stable `code` used by BDD assertions.
+- One `@RestControllerAdvice` per module with HTTP — never per endpoint.
+- Pipeline errors are **not** HTTP exceptions: they become `*_FAILED` statuses + `processing_errors` rows (see `docs/sdd/resiliencia-e-operacao.md`).
 
 **Centralized Logging**
 
-- `Logger` (`com.github.overz.shared`) — the interface every class logs through; `AppLogs.of(MyClass.class)` returns one, backed today by SLF4J (`Slf4JLogger`) but swappable without touching call sites.
-- The factory caches by class (`ClassValue<Logger>`, key = `Class<?>`, value = the SLF4J `Logger` for it) — never call `LoggerFactory.getLogger(...)` directly in application code.
-- Log messages must say what happened and why (`"upload rejected: unsupported content-type {}"`, not `"error"`) — a log line that doesn't help debug the actual failure isn't worth writing.
+- `Logger` (`com.github.overz.shared`) — the interface every class logs through; obtained from the project's `LoggerFactory` (`shared`), backed today by SLF4J (`Slf4JLogger`) and cached per class (`ClassValue`). Never call SLF4J's `LoggerFactory.getLogger(...)` directly in application code.
+- Log lines must say what happened and why; pipeline logs always include `documentId` and `correlationId`.
 
-### Key Technology Decisions
+## Key Technology Decisions (summary — detail in the SDD/ADL)
 
-**Spring AI RAG Pipeline**
+- **Lifecycle (RF08):** `RECEIVED → VALIDATING → UPLOADED → QUEUED? → EXTRACTING → TRANSFORMING → CHUNKING → [EMBEDDING ‖ GRAPH_BUILDING] → COMPLETED | PARTIALLY_COMPLETED | FAILED`, with `embeddingStatus`/`graphStatus` sub-states. Only `DocumentLifecycleService` transitions status.
+- **Identity:** JWT + Keycloak from day 1 (single realm, `tenantId` claim, `ownerId` = `sub`); controllers only see `CallerContext`. No mocked-auth phase.
+- **Multitenancy:** `tenantId`/`ownerId`/`isActive` structural in every store and **every** read filter; cross-tenant resources answer `404`, not `403`.
+- **Retrieval:** vector top-N ‖ query-NER + 1–2 hop graph traversal, fused with RRF (k=60); parent chunks compose the prompt; stateless synchronous JSON response with citations (`degraded: true` when generation is skipped).
+- **Embeddings:** `nomic-embed-text` via Ollama with mandatory `search_document:`/`search_query:` prefixes; pt-BR validation via golden set before volume; model swap = full reindex (alias `chunks-v1` → `chunks-v2`).
+- **Testing:** deterministic AI stubs in the default build; real models only in the golden-set evaluator. Tests assert invariants; the golden set measures quality.
 
-| Concern | What it is | What it's for | Status |
-|---|---|---|---|
-| Chat model | Ollama serving `qwen3:8b` (or similar), with tool calling | Grounded answer generation (Épico 10) and agentic tool use (Épico 11) | ⏳ Dependency present (`spring-ai-starter-model-ollama`, added for embeddings — see below); no `ChatClient`/tool wiring yet (Épico 10/11) |
-| Embeddings | Ollama serving `nomic-embed-text` (`spring-ai-starter-model-ollama`) | Turns text chunks into vectors, tuned for retrieval quality | ⏳ Dependency present; not yet wired into a pipeline. `OLLAMA_MAX_LOADED_MODELS=2` in `compose.yaml` keeps chat + embedding models resident together — see ADR-003 (also documents why this isn't `spring-ai-starter-model-transformers`, the original choice here) |
-| Vector store | OpenSearch (`spring-ai-starter-vector-store-opensearch`) | Hybrid retrieval — k-NN vector search + BM25 full-text in the same engine | ⏳ Dependency present; container/index not yet provisioned |
-| Document ingestion (PDF/image) | `DoclingPdfDocumentReader` (custom, calls the `docling-serve` HTTP service — see ADR-002) | Layout-aware extraction, OCR, table structure for PDFs and images | ✅ Implemented (`com.github.overz.rag.internal`); not yet wired into an upload pipeline |
-| Document ingestion (other formats) | Apache Tika (`TikaDocumentReader`) | Extracts text from DOCX/PPTX/HTML/RTF; also used for MIME sniffing and native metadata | ⏳ Planned — no reader pipeline wired up yet |
-| Chat memory | Neo4j (`spring-ai-starter-model-chat-memory-repository-neo4j`) | Persists conversation history across chat turns | ✅ Dependency present |
-| MCP server | Exposed over HTTP (`spring-ai-starter-mcp-server-webmvc`) | Lets external AI agents call this app's tools/resources via Model Context Protocol | ✅ Dependency present; no tools registered yet |
+## BDD Workflow (how an RF "closes")
 
-**Spring Modulith**
+1. Implement the RF in its module.
+2. Replace the `PendingException` in the matching steps (`com.github.overz.bdd.steps`) with real automation (add `@CucumberContextConfiguration` + `@SpringBootTest` when Spring context is needed — `cucumber-spring` is on the classpath).
+3. Remove the `@pendente` tag from the scenario/feature.
+4. `./mvnw test` — the scenario must pass; `ModularityTest` keeps guarding boundaries.
 
-| Artifact | What it's for |
-|---|---|
-| `spring-modulith-starter-core` | Module detection and event infrastructure |
-| `spring-modulith-starter-jpa` | Domain event publication via JPA |
-| `spring-modulith-starter-neo4j` | Domain event publication via Neo4j |
-| `spring-modulith-starter-insight` | Module metadata via Actuator (`/actuator/modulith`) |
+Definition of Done for every backlog task: its `@RFxx` scenarios pass without `@pendente`.
 
-**Messaging**
-Spring Cloud Stream + Spring Integration for async flows. Integration adapters cover HTTP, JPA, STOMP, and WebSocket.
+## Dev Mode Entrypoint
 
-**Observability**
-OpenTelemetry traces exported to the LGTM stack; Prometheus metrics scraped by Grafana.
-
-### Dev Mode Entrypoint
-
-**What it is:** `TestApplication` (in `src/test/`).
-
-**What it's for:** running the real `Application` locally without Docker Compose, replacing it with Testcontainers-managed infrastructure.
+`TestApplication` (in `src/test/`) runs the real `Application` with Testcontainers instead of Docker Compose:
 
 ```bash
 ./mvnw spring-boot:test-run
 ```
 
-See the Testcontainers caveat in "Current implementation stage" above — Postgres/Neo4j containers are currently disabled pending a Testcontainers 2.0 API migration.
+Caveat: Postgres/Neo4j test containers are disabled pending the Testcontainers 2.x migration ([0.2]).
 
 ## graphify
 
