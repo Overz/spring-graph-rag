@@ -1,0 +1,380 @@
+volumes:
+  pgdata:
+  neo4j_data:
+  opensearch_data:
+  ollama_data:
+  redis_data:
+
+networks:
+  app:
+
+services:
+
+  # Build da aplicação — comentado de propósito, não queremos a app rodando via compose ainda.
+  # Descomente quando quiser containerizar o app em vez de rodar com ./mvnw.
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: spring-ai-rag:latest
+  #   container_name: spring-ai-rag-app
+  #   ports:
+  #     - '3000:3000'
+  #   depends_on:
+  #     - postgres
+  #     - neo4j
+  #     - opensearch
+  #     - minio
+  #     - ollama
+  #   networks:
+  #     - app
+
+  postgres:
+    image: 'postgres:18.4'
+    hostname: 'postgres-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.25'
+          memory: '256Mb'
+        limits:
+          cpus: '0.5'
+          memory: '512Mb'
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app
+
+  adminer:
+    image: 'adminer:5.4.2'
+    hostname: 'adminer-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.1'
+          memory: '64Mb'
+        limits:
+          cpus: '0.25'
+          memory: '128Mb'
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres-svc
+    ports:
+      - '8080:8080'
+    networks:
+      - app
+
+  neo4j:
+    image: 'neo4j:5.26.28-community'
+    hostname: 'neo4j-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.25'
+          memory: '512Mb'
+        limits:
+          cpus: '0.5'
+          memory: '768Mb'
+    environment:
+      NEO4J_AUTH: neo4j/notverysecret
+      # Heap/pagecache dimensionados abaixo do limit do container, senão a JVM
+      # tenta alocar mais do que o cgroup permite e o container morre por OOM.
+      NEO4J_server_memory_heap_initial__size: 400m
+      NEO4J_server_memory_heap_max__size: 400m
+      NEO4J_server_memory_pagecache_size: 200m
+    ports:
+      - '7474:7474'
+      - '7687'
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - app
+
+  # Parsing de PDF/imagem (layout, OCR, tabela) — substitui Tika para esses formatos,
+  # ver docs/ADRs/ADR-002-parsing-pdf-imagem-docling.md. Imagem CPU-only de propósito:
+  # a GPU (8GB VRAM) já está reservada para o Ollama, sem folga para os dois disputarem.
+  # OCR e estrutura de tabela vêm habilitados por padrão, com os modelos já embutidos
+  # na imagem — não precisa de download/volume extra de modelo.
+  docling-serve:
+    image: 'quay.io/docling-project/docling-serve-cpu:v1.26.0'
+    hostname: 'docling-serve-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '2'
+          memory: '2Gb'
+        limits:
+          cpus: '4'
+          memory: '4Gb'
+    environment:
+      DOCLING_SERVE_ENABLE_UI: 1
+    ports:
+      - '5001:5001'
+    networks:
+      - app
+
+  # Motor de busca vetorial (k-NN) + full-text (BM25) — ver docs/rag-plan.md Épico 7.
+  # No Linux, rode antes de subir: sudo sysctl -w vm.max_map_count=262144
+  opensearch:
+    image: 'opensearchproject/opensearch:3.7.0'
+    hostname: 'opensearch-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.5'
+          memory: '768Mb'
+        limits:
+          cpus: '1'
+          memory: '1Gb'
+    environment:
+      discovery.type: single-node
+      plugins.security.disabled: "true" # ok para dev local; nunca em produção
+      # Heap reduzido pra caber no limit acima — está bem abaixo do 1g sugerido no
+      # rag-plan.md; suficiente pro volume de teste de um caso de estudo local.
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - '9200:9200'
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    networks:
+      - app
+
+  # UI de consulta/inspeção dos índices do OpenSearch — opcional, útil para depurar
+  # a busca híbrida (Épico 9.4) sem escrever Cypher/curl toda hora. Remova se não quiser.
+  opensearch-dashboards:
+    image: 'opensearchproject/opensearch-dashboards:3.7.0'
+    hostname: 'opensearch-dashboards-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.25'
+          memory: '256Mb'
+        limits:
+          cpus: '0.5'
+          memory: '512Mb'
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true" # espelha plugins.security.disabled acima
+    ports:
+      - '5601:5601'
+    depends_on:
+      - opensearch
+    networks:
+      - app
+
+  # Armazenamento do arquivo bruto enviado pelo usuário (Épico 1.4) — backend de dados do
+  # JuiceFS abaixo. A pasta montada aqui guarda o formato interno do MinIO (erasure coding),
+  # não os arquivos "crus" — quem expõe os arquivos de verdade como filesystem é o JuiceFS.
+  minio:
+    image: 'minio/minio:RELEASE.2025-09-07T16-13-09Z'
+    hostname: 'minio-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.1'
+          memory: '128Mb'
+        limits:
+          cpus: '0.25'
+          memory: '256Mb'
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: miniouser
+      MINIO_ROOT_PASSWORD: miniopass
+    ports:
+      - '9000:9000' # API S3
+      - '9001:9001' # Console web
+    volumes:
+      - ./tmp/minio:/data
+    networks:
+      - app
+
+  redis:
+    image: 'redis:8.8.0'
+    hostname: 'redis-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.1'
+          memory: '64Mb'
+        limits:
+          cpus: '0.25'
+          memory: '128Mb'
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - app
+
+  # Passo único: registra o volume JuiceFS — metadados (árvore de diretórios, permissões)
+  # no Redis, dados dos blobs no bucket do MinIO. juicefs format é idempotente, reexecutar
+  # num volume já formatado não tem efeito. Confira a tag/entrypoint da imagem oficial
+  # (juicedata/mount) antes do primeiro uso — a CLI mudou de nome/edição algumas vezes.
+  juicefs-format:
+    image: 'juicedata/mount:ce-v1.3.1'
+    hostname: 'juicefs-format-svc'
+    restart: 'no' # tarefa de execução única — não deve reiniciar em loop
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.1'
+          memory: '64Mb'
+        limits:
+          cpus: '0.25'
+          memory: '128Mb'
+    command:
+      - juicefs
+      - format
+      - --storage=minio
+      - --bucket=http://minio:9000/blobstore
+      - --access-key=ragadmin
+      - --secret-key=ragadmin123
+      - redis://redis:6379/1
+      - ragvolume
+    depends_on:
+      - minio
+      - redis
+    networks:
+      - app
+
+  # Mount real do JuiceFS como filesystem POSIX em ./tmp/blobstore — a app rodando no host
+  # (fora do compose, via ./mvnw) escreve ali como um diretório comum, e por baixo cada
+  # arquivo vira um objeto de verdade no bucket do MinIO. Funciona porque o mount bind é
+  # propagado (rshared) do container pro host — exige que a raiz do host já seja "shared"
+  # (checar com: findmnt -o TARGET,PROPAGATION /; se vier "private", rode uma vez:
+  # sudo mount --make-rshared /). Em Ubuntu/Debian com AppArmor ativo, pode ser necessário
+  # readicionar security_opt: apparmor:unconfined — Arch/Manjaro não tem esse LSM por padrão.
+  juicefs-mount:
+    image: 'juicedata/mount:ce-v1.3.1'
+    hostname: 'juicefs-mount-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.25'
+          memory: '256Mb'
+        limits:
+          cpus: '0.5'
+          memory: '512Mb'
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    command: ['juicefs', 'mount', 'redis://redis:6379/1', '/mnt/blobstore']
+    volumes:
+      - type: bind
+        source: ./tmp/blobstore
+        target: /mnt/blobstore
+        bind:
+          propagation: rshared
+    depends_on:
+      - juicefs-format
+    networks:
+      - app
+
+  # Runtime de LLM local. Modelo do projeto: qwen3:8b (rag-plan.md Épico 0.2/3.2) — cabe
+  # confortavelmente em 8GB de VRAM (quantização Q4) e é o mais consistente em tool calling
+  # entre os testados no plano, requisito direto pro MCP local que vai rodar em cima dele.
+  # Pré-requisito no host: nvidia-container-toolkit instalado e configurado para o Docker.
+  # É a única imagem com limite maior aqui — o resto do compose fica enxuto de propósito
+  # para sobrar RAM para o modelo.
+  ollama:
+    image: 'ollama/ollama:0.31.1'
+    hostname: 'ollama-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '2'
+          memory: '8Gb'
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          cpus: '4'
+          memory: '12Gb'
+    environment:
+      # Mantém o modelo carregado entre chamadas — evita o custo de recarregar a cada
+      # requisição durante uma sessão de estudo/desenvolvimento.
+      OLLAMA_KEEP_ALIVE: 30m
+      # 2, não 1: qwen3:8b (chat) + nomic-embed-text (embeddings, ver ADR-003) ficam
+      # residentes ao mesmo tempo. Com 1, o Ollama alternaria os dois a cada troca entre
+      # chat e embedding — descarregando/recarregando modelo, não só "mais lento".
+      # Os dois juntos cabem nos 8GB de VRAM (qwen3:8b ~5-6GB + nomic-embed-text ~274MB).
+      OLLAMA_MAX_LOADED_MODELS: 2
+    ports:
+      - '11434:11434'
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - app
+
+  # Passo único: garante que qwen3:8b (chat) e nomic-embed-text (embeddings, ver
+  # ADR-003) estão baixados assim que o Ollama sobe — sem isso, a primeira chamada
+  # da app ficaria esperando o download em vez de responder.
+  # Reexecutar é seguro: ollama pull não baixa de novo se o modelo já existe.
+  ollama-pull:
+    image: 'ollama/ollama:0.31.1'
+    hostname: 'ollama-pull-svc'
+    restart: 'no' # tarefa de execução única — não deve reiniciar em loop
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.1'
+          memory: '64Mb'
+        limits:
+          cpus: '0.25'
+          memory: '256Mb'
+    entrypoint: ['sh', '-c']
+    command: ['ollama pull qwen3:8b && ollama pull nomic-embed-text']
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      - ollama
+    networks:
+      - app
+
+  # Stack de observabilidade (Grafana + Mimir + Loki + Tempo + OTel Collector).
+  # Métricas do actuator são coletadas via scrape (ver otelcol-config.yaml, mount abaixo);
+  # traces e logs chegam via push OTLP direto da aplicação (ver application.yaml).
+  # host.docker.internal:host-gateway é o que permite o collector alcançar o app no host.
+  grafana-lgtm:
+    image: 'grafana/otel-lgtm:0.28.0'
+    hostname: 'grafana-lgtm-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.5'
+          memory: '1Gb'
+        limits:
+          cpus: '1'
+          memory: '2Gb'
+    ports:
+      - '3000:3000'
+      - '4317:4317'
+      - '4318:4318'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    volumes:
+      - ./infra/otelcol-config.yaml:/otel-lgtm/otelcol-config.yaml:ro
+    networks:
+      - app
