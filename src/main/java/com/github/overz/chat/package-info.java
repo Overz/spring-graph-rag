@@ -12,7 +12,7 @@
  * Comunicação com outros módulos exclusivamente via eventos Spring ou APIs públicas.
  */
 @ApplicationModule(
-    displayName = "Chat",
+    displayName = "Chat LLM",
     allowedDependencies = {}
 )
 package com.github.overz.chat;

@@ -1,10 +1,10 @@
-# Capability: autenticacao
+# autenticacao Specification
 
-> Fatia do **RF35** exigida pelo DoD da tarefa [0.7] (identidade desde o dia 1, ADL-008).
-> Validada por `src/test/resources/features/seguranca/autenticacao-e-criptografia.feature` (`@RF35`) — cenários de token; os cenários de AuthN de MCP e criptografia fecham no Épico 9 ([9.4]/[9.5]).
-> Design: `docs/sdd/seguranca.md` §1.
+## Purpose
 
-## ADDED Requirements
+Fatia do **RF35** (identidade desde o dia 1, ADL-008): autenticação JWT obrigatória via Keycloak (realm `graphrag`), claim `tenantId` obrigatória e resolução do `CallerContext` exclusivamente a partir das claims do token. Validada por `src/test/resources/features/seguranca/autenticacao-e-criptografia.feature` (`@RF35`); os cenários de AuthN de MCP e criptografia pertencem ao Épico 9 ([9.4]/[9.5]). Design: `docs/sdd/seguranca.md` §1.
+
+## Requirements
 
 ### Requirement: Autenticação JWT obrigatória na API
 

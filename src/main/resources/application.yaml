@@ -1,18 +1,30 @@
 server:
   address: "${APP_HOST:0.0.0.0}"
-  port: "${APP_PORT:3000}"
+  port: "${APP_PORT:8090}"
   shutdown: graceful
 
 spring:
   application:
     name: @project.artifactId@
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Realm graphrag do Keycloak local (ADL-008) — validação por JWKS
+          issuer-uri: "${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/graphrag}"
   servlet:
     multipart:
-      # Placeholder — ainda não medido contra documentos reais (ver design.md do
-      # change foundation-and-ingestion-intake, "Open Questions").
-      max-file-size: 20MB
-      max-request-size: 20MB
-#  ai:
+      # Um pouco acima do limite de negócio de 5MB (RF03) para que a validação de
+      # domínio (413 + code estável) responda antes da exceção genérica do container
+      # (docs/sdd/ingestao.md §2).
+      max-file-size: 6MB
+      max-request-size: 6MB
+  ai:
+    vectorstore:
+      opensearch:
+        # Obrigatório para o OpenSearchClient da autoconfiguração; a conexão em si é
+        # preguiçosa — o índice de chunks só passa a existir/ser usado no Épico 5.
+        uris: "${OPENSEARCH_URIS:http://localhost:9200}"
 #    ollama:
 #      base-url: "${OLLAMA_BASE_URL:http://localhost:11434}"
 #      init:

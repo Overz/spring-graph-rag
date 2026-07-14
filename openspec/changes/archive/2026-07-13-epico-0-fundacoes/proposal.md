@@ -13,6 +13,7 @@ O repositório carrega débitos de ambiente que fazem o Épico 1 (RF01–RF07) n
 - **[0.5]** Credenciais MinIO×JuiceFS unificadas em `infra/minio/.env.minio` (compartilhado no compose); `max-file-size` do multipart baixa de 20MB para **6MB** — pouco acima do limite de negócio de 5MB (RF03), para a validação de domínio responder antes do container.
 - **[0.7]** Keycloak no `compose.yaml` (ADL-008): database dedicado na instância Postgres existente via `infra/postgres/.env.postgres` + `configure.sh` (padrão `POSTGRES_MULTIPLE_DATABASE_N=db/schema/user/pass`), realm `graphrag` versionado em JSON e importado no start; app vira OAuth2 Resource Server com `CallerContext` resolvido das claims.
 - **[0.8]** Dependência `spring-ai-starter-model-chat-memory-repository-neo4j` removida do `pom.xml` (ADL-007 — consulta stateless).
+- **Harness E2E/BDD** (pavimentação de qualidade, SDD `qualidade-e-testes.md` §§2–3): classe `@CucumberContextConfiguration` + `@SpringBootTest(RANDOM_PORT)` importando a `TestcontainersConfiguration` (que ganha container Keycloak com o mesmo realm JSON do compose), helper de tokens com cache por usuário — e os cenários `@RF35` de token saem de `@pendente`, tornando-se os primeiros E2E verdes do projeto.
 
 ## Capabilities
 
@@ -30,4 +31,4 @@ Nenhuma — `openspec/specs/` está vazio (primeiro change do projeto).
 - **Infra:** `compose.yaml` (Keycloak novo, porta do Adminer, env files); `infra/postgres/` (`.env.postgres`, `configure.sh`), `infra/minio/.env.minio`, `infra/keycloak/` (Dockerfile, `.env.keycloak`, realm JSON) novos.
 - **App:** `application.yaml` (porta 8090, `max-file-size: 6MB`, config de resource server); Spring Security OAuth2 Resource Server + `CallerContext` no código (módulos `shared`/`api`).
 - **Banco:** `src/main/resources/db/migration/V1__*` reescrita (nome novo coerente com o conteúdo).
-- **BDD:** nenhum cenário fecha por completo neste épico — os `@RF35` de token (sem token / expirado) tornam-se automatizáveis e o realm de teste (2 tenants × 2 usuários + admin + client de agente por tenant) passa a existir para toda a suíte.
+- **BDD:** os dois cenários `@RF35` de token (sem token / expirado) **fecham** neste épico (o `401` vem do filter chain, não depende de endpoint de domínio); o harness Cucumber+Spring+Testcontainers e o realm de teste (2 tenants × 2 usuários + admin + client de agente por tenant) passam a existir para toda a suíte.

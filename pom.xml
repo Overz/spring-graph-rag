@@ -86,6 +86,10 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-opentelemetry</artifactId>
     </dependency>
     <dependency>
@@ -143,15 +147,20 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.ai</groupId>
-      <artifactId>spring-ai-starter-model-chat-memory-repository-neo4j</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.ai</groupId>
       <artifactId>spring-ai-starter-model-ollama</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.ai</groupId>
       <artifactId>spring-ai-starter-vector-store-opensearch</artifactId>
+      <!-- Sem o AWS SDK a autoconfiguração usa o sabor OpenSearch padrão (URI local).
+           Com ele no classpath, o Spring AI ativa AwsOpenSearchConfiguration e exige
+           credenciais AWS no boot — projeto é 100% local (premissa 1 do SDD). -->
+      <exclusions>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.springframework.ai</groupId>
@@ -189,13 +198,13 @@
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-insight</artifactId>
     </dependency>
+    <!-- Event publication registry no Postgres via JPA (SDD ingestao.md §7.1).
+         O starter-neo4j do Modulith também registra um EventPublicationRepository e
+         conflita com este (NoUniqueBeanDefinition) — o acesso a dados Neo4j do grafo
+         vem do spring-boot-starter-data-neo4j, não do Modulith. -->
     <dependency>
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-jpa</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.modulith</groupId>
-      <artifactId>spring-modulith-starter-neo4j</artifactId>
     </dependency>
 
     <!-- ===== Runtime ===== -->

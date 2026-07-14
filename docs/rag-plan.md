@@ -192,6 +192,8 @@ O `compose.yaml` já dimensiona cada serviço com `reservations`/`limits` explí
 
 ## 5. Estado Atual do Repositório
 
+> **Atualização (julho/2026): Épico 0 concluído** — change `openspec/changes/epico-0-fundacoes`. Os débitos 1–7 listados abaixo foram todos resolvidos: wrapper regenerado, Testcontainers 2.x migrado (+ container Keycloak), portas resolvidas (app 8090; Keycloak 8080; Adminer 8081), `V1__baseline_documents.sql` conforme `sdd/dados.md` §2, credenciais unificadas em `infra/minio/.env.minio`, `max-file-size` 6MB, Keycloak 26.7.0 no compose com realm versionado e app como resource server (`CallerContext`), dependência de chat memory removida. Harness E2E/BDD ativo — os 2 cenários `@RF35` de token passam sem `@pendente`. Extras descobertos na implementação: AppArmor exigiu `security_opt` no `juicefs-mount`; postgres:18+ mudou o datadir; AWS SDK excluído do starter OpenSearch; `spring-modulith-starter-neo4j` removido (registry duplicado).
+
 O que existe hoje, verificado no código (julho/2026):
 
 **Pronto e funcionando**

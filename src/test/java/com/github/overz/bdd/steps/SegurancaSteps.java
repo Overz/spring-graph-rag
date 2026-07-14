@@ -1,18 +1,37 @@
 package com.github.overz.bdd.steps;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.github.overz.bdd.KeycloakTokens;
 import io.cucumber.java.PendingException;
 import io.cucumber.java.pt.Dado;
 import io.cucumber.java.pt.Entao;
 import io.cucumber.java.pt.Quando;
 import io.cucumber.datatable.DataTable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.client.RestClient;
 
 /**
- * Steps esqueleto da área seguranca — cenários marcados com {@code @pendente}.
- *
- * <p>Ao implementar a funcionalidade correspondente, substitua o {@link PendingException}
- * pela automação real e remova a tag {@code @pendente} do cenário no arquivo .feature.
+ * Steps da área seguranca — os cenários de token (@RF35) estão automatizados; os demais
+ * seguem {@code @pendente} com {@link PendingException} até seus épicos chegarem.
  */
 public class SegurancaSteps {
+
+  @Autowired
+  private JdbcTemplate jdbc;
+
+  @Value("${local.server.port}")
+  private int port;
+
+  @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+  private String issuerUri;
+
+  private final HttpHeaders requestHeaders = new HttpHeaders();
+  private ResponseEntity<String> response;
 
   @Dado("que o usuário {string} executou a ação de {string} sobre um documento")
   public void queOUsuarioStringExecutouAAcaoDeString(String p1, String p2) {
@@ -56,27 +75,39 @@ public class SegurancaSteps {
 
   @Dado("uma requisição de upload sem token de autenticação")
   public void umaRequisicaoDeUploadSemTokenDeAutenticacao() {
-    throw new PendingException();
+    requestHeaders.remove(HttpHeaders.AUTHORIZATION);
   }
 
   @Quando("a requisição chegar à API")
   public void aRequisicaoChegarAApi() {
-    throw new PendingException();
+    // A rota de upload (RF01) ainda não existe — irrelevante para estes cenários: o filtro
+    // de segurança rejeita a requisição não autenticada antes de qualquer roteamento.
+    response = RestClient.builder()
+      .baseUrl("http://localhost:" + port)
+      .build()
+      .post()
+      .uri("/api/v1/documents")
+      .headers(headers -> headers.addAll(requestHeaders))
+      .retrieve()
+      .onStatus(status -> true, (request, clientResponse) -> { /* não lançar em 4xx/5xx */ })
+      .toEntity(String.class);
   }
 
   @Entao("a resposta deve ser {string}")
-  public void aRespostaDeveSerString(String p1) {
-    throw new PendingException();
+  public void aRespostaDeveSerString(String esperado) {
+    final var codigoEsperado = Integer.parseInt(esperado.split(" ")[0]);
+    assertThat(response.getStatusCode().value()).isEqualTo(codigoEsperado);
   }
 
   @Entao("nenhum processamento deve ser iniciado")
   public void nenhumProcessamentoDeveSerIniciado() {
-    throw new PendingException();
+    final var documentos = jdbc.queryForObject("SELECT count(*) FROM documents", Long.class);
+    assertThat(documentos).isZero();
   }
 
   @Dado("uma requisição com token JWT expirado")
   public void umaRequisicaoComTokenJwtExpirado() {
-    throw new PendingException();
+    requestHeaders.setBearerAuth(KeycloakTokens.expiredToken(issuerUri, "alice"));
   }
 
   @Dado("que um agente externo aciona uma ferramenta MCP sem credenciais válidas")

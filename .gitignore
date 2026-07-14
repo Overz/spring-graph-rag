@@ -3,6 +3,7 @@ tmp
 .agent*
 .env
 !.env.example
+graphify-out
 
 HELP.md
 target/

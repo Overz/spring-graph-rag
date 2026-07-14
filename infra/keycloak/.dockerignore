@@ -1,0 +1,3 @@
+# Nada do contexto de build é copiado para a imagem (o realm em data/import é
+# montado como volume pelo compose.yaml) — ignora tudo para manter o contexto mínimo.
+*

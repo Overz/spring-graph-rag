@@ -31,7 +31,7 @@ Coherence rule: requirements beat everything; BDD and the SDD beat the plan (the
 - Complete local infra in `compose.yaml` (see table below) and OTel instrumentation wired to the LGTM stack.
 - SDD complete (`docs/sdd/`), written from an architecture discovery session (July/2026).
 
-**Known debts (all tracked as Épico 0 tasks in `docs/rag-plan.md` §5–6):** missing `mvnw` wrapper scripts ([0.1] — regenerate with `mvn -N wrapper:wrapper`); `TestcontainersConfiguration` Postgres/Neo4j beans commented out pending Testcontainers 2.x API migration ([0.2]); port 3000 conflict between the app default and `grafana-lgtm` ([0.3]); Flyway `V1` follows the pre-requirements schema and must be rewritten ([0.4]); JuiceFS×MinIO credential mismatch in `compose.yaml` ([0.5]); Keycloak not yet provisioned ([0.7]); `chat-memory-repository-neo4j` dependency to be removed ([0.8]).
+**Épico 0 debts: all resolved (July/2026, change `openspec/changes/epico-0-fundacoes`).** What now exists on top of the skeleton: `mvnw` wrapper; Flyway `V1__baseline_documents.sql` per `sdd/dados.md` §2; Keycloak 26.7.0 in `compose.yaml` (realm `graphrag` versioned at `infra/keycloak/data/import/`, dedicated DB created by the Postgres init script `infra/postgres/`); the app is an OAuth2 resource server (`CallerContext` in `shared`, security in `api/internal/security` — 401 without token/`tenantId` claim, zero clock skew); MinIO/JuiceFS credentials unified in `infra/minio/.env.minio`; `TestcontainersConfiguration` on the 2.x API with Postgres/Neo4j/Keycloak; E2E/BDD harness live (`CucumberSpringConfiguration` + `KeycloakTokens`) — the two `@RF35` token scenarios run green, the rest of the suite remains `@pendente`.
 
 > OpenSpec is planned as the backlog-execution layer (one change per épico, referencing the SDD) once implementation starts — the `openspec/` directory does not exist yet; don't reference `openspec` commands until it does.
 
@@ -60,19 +60,19 @@ Provisioned via `compose.yaml` (source of truth; Spring Boot Docker Compose supp
 
 | Service | What it's for | Status |
 |---|---|---|
-| PostgreSQL 18.x (+ Adminer) | Metadata, lifecycle/history, errors, audit, quotas (Flyway); will also host the Keycloak schema | ✅ in `compose.yaml` (schema rewrite pending — [0.4]) |
+| PostgreSQL 18.x (+ Adminer) | Metadata, lifecycle/history, errors, audit, quotas (Flyway); also hosts the dedicated `keycloak` database (init script `infra/postgres/`) | ✅ in `compose.yaml` |
 | Neo4j 5.26 Community | Knowledge graph: `Document`/`Chunk` (with `openSearchId`)/`Entity` (with aliases + name embeddings) | ✅ in `compose.yaml` |
 | OpenSearch 3.x (+ Dashboards) | Child-chunk index: k-NN + BM25 + tenant filter metadata | ✅ in `compose.yaml` |
-| MinIO + JuiceFS + Redis | Object storage mounted as POSIX (`DocumentStorage`, ADR-001; stages `RAW`/`EXTRACTED`/`TRANSFORMED`) | ✅ in `compose.yaml` (credential mismatch — [0.5]) |
+| MinIO + JuiceFS + Redis | Object storage mounted as POSIX (`DocumentStorage`, ADR-001; stages `RAW`/`EXTRACTED`/`TRANSFORMED`) | ✅ in `compose.yaml` (creds in `infra/minio/.env.minio`) |
 | Ollama (`qwen3:8b` + `nomic-embed-text`) | Chat/extraction LLM + embeddings, both resident (`OLLAMA_MAX_LOADED_MODELS=2`, ADR-003) | ✅ in `compose.yaml` |
 | Docling Serve (CPU) | PDF/image parsing, OCR, tables (ADR-002) | ✅ in `compose.yaml` |
-| Grafana OTel-LGTM | Traces/logs/metrics (deep observability postponed — Épico 10) | ✅ in `compose.yaml` (port 3000 conflict — [0.3]) |
-| Keycloak | AuthN: JWT, realm `graphrag` versioned as JSON, `tenantId` claim (ADL-008) | ⏳ Épico 0 ([0.7]) |
+| Grafana OTel-LGTM | Traces/logs/metrics (deep observability postponed — Épico 10) | ✅ in `compose.yaml` (port 3000) |
+| Keycloak 26.7.0 | AuthN: JWT, realm `graphrag` versioned as JSON, `tenantId` claim (ADL-008); admin console at :8080 (admin/admin, dev) | ✅ in `compose.yaml` (`infra/keycloak/`) |
 | ClamAV | Malware scan before `UPLOADED` (RF02) | ⏳ Épico 1 ([1.3]) |
 | NATS | External messaging / fair queueing (RF12/RF39) | ⏳ Épico 3 ([3.4]) |
 | GLiNER sidecar | Zero-shot NER, labels = the RF21 ontology (ADL-006) | ⏳ Épico 6 ([6.1]) |
 
-The app listens on port `3000` by default (`APP_PORT`, `APP_HOST`) — conflicts with `grafana-lgtm` until [0.3] is resolved.
+The app listens on port `8090` by default (`APP_PORT`, `APP_HOST`); compose services use each product's default port (Grafana 3000, Keycloak 8080, Adminer remapped to 8081).
 
 ## Architecture
 
@@ -148,7 +148,7 @@ Definition of Done for every backlog task: its `@RFxx` scenarios pass without `@
 ./mvnw spring-boot:test-run
 ```
 
-Caveat: Postgres/Neo4j test containers are disabled pending the Testcontainers 2.x migration ([0.2]).
+Runs the real app with Postgres, Neo4j and Keycloak (same versioned realm as compose) as Testcontainers.
 
 ## graphify
 

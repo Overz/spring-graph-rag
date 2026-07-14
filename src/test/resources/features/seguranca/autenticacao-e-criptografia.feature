@@ -1,8 +1,9 @@
 # language: pt
-@pendente
 Funcionalidade: Autenticação e criptografia
   Cobre RF35 (autenticação OAuth2/OIDC com JWT para usuários e ferramentas
   MCP, criptografia em trânsito e em repouso).
+  Os cenários de token fecharam no Épico 0 ([0.7]); MCP e criptografia
+  seguem @pendente até o Épico 9 ([9.4]/[9.5]).
 
   @RF35
   Cenário: Requisição sem token de autenticação é rejeitada
@@ -17,13 +18,13 @@ Funcionalidade: Autenticação e criptografia
     Quando a requisição chegar à API
     Então a resposta deve ser "401 Unauthorized"
 
-  @RF35
+  @RF35 @pendente
   Cenário: Chamadas às ferramentas MCP exigem autenticação OAuth2/OIDC
     Dado que um agente externo aciona uma ferramenta MCP sem credenciais válidas
     Quando a chamada for recebida pelo servidor MCP
     Então a chamada deve ser rejeitada por falta de autenticação
 
-  @RF35
+  @RF35 @pendente
   Cenário: Criptografia em trânsito e em repouso
     Dado que o sistema está em operação
     Então toda comunicação externa e entre serviços internos deve usar TLS

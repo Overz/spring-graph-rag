@@ -19,7 +19,7 @@ services:
   #   image: spring-ai-rag:latest
   #   container_name: spring-ai-rag-app
   #   ports:
-  #     - '3000:3000'
+  #     - '8090:8090'
   #   depends_on:
   #     - postgres
   #     - neo4j
@@ -45,10 +45,17 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    # Databases adicionais (ex.: keycloak) criados pelo init script ([0.7]);
+    # o script só roda com o volume pgdata VAZIO — recrie o volume ao mudar.
+    env_file:
+      - ./infra/postgres/.env.postgres
     ports:
       - '5432:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # postgres:18+ guarda o datadir em /var/lib/postgresql/<major>/docker —
+      # o mount é no diretório pai, não mais em /var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
+      - ./infra/postgres/configure.sh:/docker-entrypoint-initdb.d/configure.sh:ro
     networks:
       - app
 
@@ -67,7 +74,44 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: postgres-svc
     ports:
+      # 8081 no host: a 8080 é a porta default do Keycloak ([0.3]/[0.7])
+      - '8081:8080'
+    networks:
+      - app
+
+  # Identidade desde o dia 1 (ADL-008 / [0.7]): build otimizado (--db=postgres,
+  # health/metrics habilitados), database dedicado criado pelo init do Postgres,
+  # realm `graphrag` versionado em infra/keycloak/data/import e importado no start.
+  # Admin console: http://localhost:8080 (admin/admin — DEV apenas).
+  keycloak:
+    build:
+      context: ./infra/keycloak
+    hostname: 'keycloak-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.25'
+          memory: '512Mb'
+        limits:
+          cpus: '1.0'
+          memory: '1Gb'
+    env_file:
+      - ./infra/keycloak/.env.keycloak
+    command: ['start', '--optimized', '--import-realm']
+    ports:
       - '8080:8080'
+    volumes:
+      - ./infra/keycloak/data/import:/opt/keycloak/data/import:ro
+    depends_on:
+      - postgres
+    healthcheck:
+      # Health fica no management port 9000 (não publicado no host — 9000 é do MinIO)
+      test: ['CMD', 'curl', '-sf', 'http://localhost:9000/health/ready']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
       - app
 
@@ -142,6 +186,9 @@ services:
       # Heap reduzido pra caber no limit acima — está bem abaixo do 1g sugerido no
       # rag-plan.md; suficiente pro volume de teste de um caso de estudo local.
       OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      # O entrypoint roda o instalador da demo config mesmo com o security plugin
+      # desabilitado acima e aborta o start exigindo senha forte — pular a demo config.
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
     ulimits:
       memlock:
         soft: -1
@@ -193,9 +240,9 @@ services:
           cpus: '0.25'
           memory: '256Mb'
     command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: miniouser
-      MINIO_ROOT_PASSWORD: miniopass
+    # Credenciais compartilhadas com o JuiceFS — fonte única ([0.5])
+    env_file:
+      - ./infra/minio/.env.minio
     ports:
       - '9000:9000' # API S3
       - '9001:9001' # Console web
@@ -208,6 +255,10 @@ services:
     image: 'redis:8.8.0'
     hostname: 'redis-svc'
     restart: 'always'
+    # AOF obrigatório: guarda a metadata do JuiceFS — só RDB perde os últimos writes
+    # em kill não-gracioso (ex.: restart do daemon Docker) e o volume vira órfão
+    # ("Storage ... is not empty" no format + mount em crash-loop).
+    command: ['redis-server', '--appendonly', 'yes']
     deploy:
       resources:
         reservations:
@@ -239,13 +290,14 @@ services:
         limits:
           cpus: '0.25'
           memory: '128Mb'
+    # Credenciais via ACCESS_KEY/SECRET_KEY do env_file — mesmo par do MinIO ([0.5])
+    env_file:
+      - ./infra/minio/.env.minio
     command:
       - juicefs
       - format
       - --storage=minio
       - --bucket=http://minio:9000/blobstore
-      - --access-key=ragadmin
-      - --secret-key=ragadmin123
       - redis://redis:6379/1
       - ragvolume
     depends_on:
@@ -259,9 +311,12 @@ services:
   # arquivo vira um objeto de verdade no bucket do MinIO. Funciona porque o mount bind é
   # propagado (rshared) do container pro host — exige que a raiz do host já seja "shared"
   # (checar com: findmnt -o TARGET,PROPAGATION /; se vier "private", rode uma vez:
-  # sudo mount --make-rshared /). Em Ubuntu/Debian com AppArmor ativo, pode ser necessário
-  # readicionar security_opt: apparmor:unconfined — Arch/Manjaro não tem esse LSM por padrão.
+  # sudo mount --make-rshared /). Com AppArmor ativo (inclusive neste Manjaro — confira com
+  # cat /sys/kernel/security/lsm), o fusermount3 falha com "Permission denied" sem o
+  # security_opt abaixo.
   juicefs-mount:
+    security_opt:
+      - apparmor:unconfined
     image: 'juicedata/mount:ce-v1.3.1'
     hostname: 'juicefs-mount-svc'
     restart: 'always'

@@ -15,6 +15,7 @@ O repositório tem infra completa no `compose.yaml` e suíte BDD pronta, mas o c
 - Schema Flyway V1 alinhado a RF06/RF08/RF09 (DoD da [0.4]).
 - `juicefs-format` executa com sucesso; mount gravável pela app.
 - Keycloak no ar com realm `graphrag` versionado; app como resource server; `CallerContext` das claims.
+- **Harness E2E/BDD operante** (Testcontainers + Cucumber-Spring + tokens reais do Keycloak de teste), com os cenários `@RF35` de token verdes — o Épico 0 é pavimentação, e a pavimentação inclui a fundação de testes que todos os épicos seguintes usarão.
 
 **Non-Goals:**
 
@@ -31,13 +32,14 @@ O repositório tem infra completa no `compose.yaml` e suíte BDD pronta, mas o c
 4. **Credenciais de storage num único lugar:** `infra/minio/.env.minio` com o par usado por MinIO, `juicefs-format` e `juicefs-mount` via `env_file`/variáveis — elimina a classe de erro, não só a instância atual.
 5. **Multipart `max-file-size: 6MB`** (era 20MB) — pouco acima do limite de negócio de 5MB do RF03, para que a validação de domínio (413 + `code` estável) responda antes da exceção genérica do container (decisão herdada de `docs/sdd/ingestao.md` §2, aplicada aqui).
 6. **Nome da migração coerente com o conteúdo:** `V1__baseline_documents.sql` (a atual `V1__create_documents_table.sql` sai — reescrita, não incremento, pois nenhum ambiente tem dado real).
+7. **Fundação E2E/BDD nasce neste épico** (pedido do usuário, alinhado ao SDD `qualidade-e-testes.md` §§2–3): harness `@CucumberContextConfiguration` + `@SpringBootTest(RANDOM_PORT)` importando a `TestcontainersConfiguration`; Keycloak de teste importa o **mesmo** realm JSON do compose; cache de token por usuário. Os cenários `@RF35` de token fecham já — o `401` vem do filter chain do Spring Security, antes do roteamento, então não dependem de endpoint de domínio. Containers pesados/stubs de IA (Ollama, Docling, GLiNER) e o container OpenSearch entram nos épicos que os usam, mantendo o build padrão rápido (regra de custo do SDD §1).
 
 ## Risks / Trade-offs
 
 - [Testcontainers 2.x mudou API de forma incompatível] → migrar seguindo a documentação oficial 2.x (containers non-generic), validando com `spring-boot:test-run`; não copiar exemplos 1.x.
 - [Keycloak `--import-realm` com override pode apagar ajustes manuais feitos via console] → tratado como feature: realm é infra-como-código; ajuste manual só vira permanente se commitado no JSON.
-- [Sem endpoints de domínio no Épico 0, o DoD do [0.7] não tem rota de negócio para provar o 401] → validar com requisição a qualquer rota protegida (ex.: actuator não liberado) e deixar a prova plena para os primeiros endpoints do Épico 1; os cenários `@RF35` de token continuam `@pendente` até haver rota real.
-- [Toda a suíte BDD passa a depender de token por cenário] → risco já mapeado no plano (§10); mitigação futura: cache de token por usuário no runner ( `docs/sdd/qualidade-e-testes.md`).
+- [Sem endpoints de domínio no Épico 0, o `401` poderia parecer não-testável] → é testável: o Spring Security rejeita no filter chain, antes do roteamento — os cenários `@RF35` de token (sem token / expirado) fecham neste épico via harness E2E (decisão 7).
+- [Toda a suíte BDD passa a depender de token por cenário] → cache de token por usuário no helper das steps (decisão 7; risco R13 do SDD `qualidade-e-testes.md` §3).
 
 ## Migration Plan
 

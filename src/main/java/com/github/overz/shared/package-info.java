@@ -17,7 +17,7 @@
  * <p><strong>Atenção:</strong> evite colocar lógica de negócio aqui.
  * Este módulo deve conter apenas tipos e contratos sem comportamento de domínio específico.
  */
-@ApplicationModule(displayName = "Shared")
+@ApplicationModule(displayName = "Shared Code")
 package com.github.overz.shared;
 
 import org.springframework.modulith.ApplicationModule;

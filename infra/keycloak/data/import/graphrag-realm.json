@@ -1,0 +1,658 @@
+{
+  "realm": "graphrag",
+  "displayName": "GraphRAG",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "requiredCredentials": [
+    "password"
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "document:upload",
+        "description": "Enviar documentos: upload e nova versão",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "document:delete",
+        "description": "Excluir documentos (soft delete)",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "document:reprocess",
+        "description": "Reprocessar documentos",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "query:read",
+        "description": "Consultar a base de conhecimento — REST e ferramentas MCP",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "admin:dlq",
+        "description": "Administrar a DLQ: inspecionar e reprocessar mensagens",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "admin:entity-review",
+        "description": "Revisar entidades do knowledge graph",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "admin:lgpd",
+        "description": "Direito ao esquecimento (LGPD): exclusão física verificável",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "tenant",
+      "description": "Escopo default do realm: expõe o atributo de usuário `tenantId` como claim `tenantId` no access token (ADL-008) — vale para todos os clients, inclusive service accounts dos agentes MCP",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenantId",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenantId",
+            "claim.name": "tenantId",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true",
+            "multivalued": "false",
+            "aggregate.attrs": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "description": "OpenID Connect built-in scope: profile",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${profileScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "given name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "firstName",
+            "claim.name": "given_name",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "family name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "lastName",
+            "claim.name": "family_name",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "email",
+      "description": "OpenID Connect built-in scope: email",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${emailScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "emailVerified",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "description": "OpenID Connect scope for add user roles to the access token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${rolesScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "foo",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "client roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "foo",
+            "claim.name": "resource_access.${client_id}.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience resolve",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-resolve-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "web-origins",
+      "description": "OpenID Connect scope for add allowed web origins to the access token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "allowed web origins",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-allowed-origins-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "acr",
+      "description": "OpenID Connect scope for add acr (authentication context class reference) to the token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "acr loa level",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-acr-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "basic",
+      "description": "OpenID Connect scope for add all basic claims to the token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "auth_time",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.session.note": "AUTH_TIME",
+            "claim.name": "auth_time",
+            "jsonType.label": "long",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": [
+    "acr",
+    "basic",
+    "email",
+    "profile",
+    "roles",
+    "web-origins",
+    "tenant"
+  ],
+  "defaultOptionalClientScopes": [],
+  "clients": [
+    {
+      "clientId": "graphrag-api",
+      "name": "GraphRAG API",
+      "description": "Client dos usuários finais (REST): password grant em DEV (directAccessGrants) + standard flow",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "acr",
+        "basic",
+        "email",
+        "profile",
+        "roles",
+        "web-origins",
+        "tenant"
+      ],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "graphrag-mcp-agent-acme",
+      "name": "GraphRAG MCP Agent — acme_inc",
+      "description": "Client confidencial (client credentials) do agente MCP do tenant acme_inc; o service account carrega o atributo tenantId — um agente pertence a um tenant, sem exceção (ADL-008)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "acme-agent-dev-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "frontchannelLogout": false,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "acr",
+        "basic",
+        "email",
+        "profile",
+        "roles",
+        "web-origins",
+        "tenant"
+      ],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "graphrag-mcp-agent-globex",
+      "name": "GraphRAG MCP Agent — globex",
+      "description": "Client confidencial (client credentials) do agente MCP do tenant globex; o service account carrega o atributo tenantId — um agente pertence a um tenant, sem exceção (ADL-008)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "globex-agent-dev-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "frontchannelLogout": false,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "acr",
+        "basic",
+        "email",
+        "profile",
+        "roles",
+        "web-origins",
+        "tenant"
+      ],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "graphrag-e2e",
+      "name": "Cliente E2E de vida curta",
+      "description": "Existe apenas para os testes E2E gerarem tokens expirados de verdade (access token lifespan = 1s). Nao usar em fluxo de aplicacao.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "attributes": {
+        "access.token.lifespan": "1"
+      },
+      "redirectUris": [],
+      "webOrigins": []
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Acme",
+      "email": "alice@acme-inc.example",
+      "attributes": {
+        "tenantId": [
+          "acme_inc"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "alice",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-graphrag",
+        "document:upload",
+        "document:delete",
+        "document:reprocess",
+        "query:read"
+      ]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Acme",
+      "email": "bob@acme-inc.example",
+      "attributes": {
+        "tenantId": [
+          "acme_inc"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "bob",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-graphrag",
+        "document:upload",
+        "document:delete",
+        "document:reprocess",
+        "query:read"
+      ]
+    },
+    {
+      "username": "admin-acme",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Acme",
+      "email": "admin@acme-inc.example",
+      "attributes": {
+        "tenantId": [
+          "acme_inc"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin-acme",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-graphrag",
+        "document:upload",
+        "document:delete",
+        "document:reprocess",
+        "query:read",
+        "admin:dlq",
+        "admin:entity-review",
+        "admin:lgpd"
+      ]
+    },
+    {
+      "username": "carol",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Carol",
+      "lastName": "Globex",
+      "email": "carol@globex.example",
+      "attributes": {
+        "tenantId": [
+          "globex"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "carol",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-graphrag",
+        "document:upload",
+        "document:delete",
+        "document:reprocess",
+        "query:read"
+      ]
+    },
+    {
+      "username": "dave",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Dave",
+      "lastName": "Globex",
+      "email": "dave@globex.example",
+      "attributes": {
+        "tenantId": [
+          "globex"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dave",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-graphrag",
+        "document:upload",
+        "document:delete",
+        "document:reprocess",
+        "query:read"
+      ]
+    },
+    {
+      "username": "admin-globex",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Globex",
+      "email": "admin@globex.example",
+      "attributes": {
+        "tenantId": [
+          "globex"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin-globex",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-graphrag",
+        "document:upload",
+        "document:delete",
+        "document:reprocess",
+        "query:read",
+        "admin:dlq",
+        "admin:entity-review",
+        "admin:lgpd"
+      ]
+    },
+    {
+      "username": "service-account-graphrag-mcp-agent-acme",
+      "enabled": true,
+      "serviceAccountClientId": "graphrag-mcp-agent-acme",
+      "attributes": {
+        "tenantId": [
+          "acme_inc"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-graphrag",
+        "query:read"
+      ]
+    },
+    {
+      "username": "service-account-graphrag-mcp-agent-globex",
+      "enabled": true,
+      "serviceAccountClientId": "graphrag-mcp-agent-globex",
+      "attributes": {
+        "tenantId": [
+          "globex"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-graphrag",
+        "query:read"
+      ]
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}],\"unmanagedAttributePolicy\":\"ENABLED\"}"
+          ]
+        }
+      }
+    ]
+  }
+}
