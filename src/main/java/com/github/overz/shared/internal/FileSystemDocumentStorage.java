@@ -5,6 +5,7 @@ import com.github.overz.shared.logging.ILogger;
 import com.github.overz.shared.logging.LoggerFactory;
 import com.github.overz.shared.storage.DocumentStorage;
 import com.github.overz.shared.storage.StorageLocation;
+import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,15 +22,12 @@ import java.nio.file.StandardCopyOption;
  * <p>Registrado como bean em {@code SharedConfig} — sem estereótipo de classe,
  * conforme a convenção de configuração centralizada do projeto.
  */
+@RequiredArgsConstructor
 public final class FileSystemDocumentStorage implements DocumentStorage {
 
   private static final ILogger log = LoggerFactory.of(FileSystemDocumentStorage.class);
 
   private final Path baseDir;
-
-  public FileSystemDocumentStorage(final String baseDir) {
-    this.baseDir = Path.of(baseDir).toAbsolutePath().normalize();
-  }
 
   @Override
   public String store(final StorageLocation location, final InputStream content) {

@@ -19,7 +19,7 @@ class FileSystemDocumentStorageTest {
 
   @Test
   void gravaNaChaveSegregadaComConteudoIdentico() throws Exception {
-    final var storage = new FileSystemDocumentStorage(baseDir.toString());
+    final var storage = new FileSystemDocumentStorage(baseDir);
     final var conteudo = "conteúdo do contrato".getBytes();
     final var location = new StorageLocation(StorageStage.RAW, "acme_inc", "user-1", "doc-123", "contrato.pdf");
 
