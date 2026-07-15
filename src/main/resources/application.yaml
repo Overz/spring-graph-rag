@@ -47,11 +47,9 @@ management:
       exposure:
         include: health, prometheus
   # Métricas em formato Prometheus ficam expostas em /actuator/prometheus para o OTel
-  # Collector coletar via scrape (ver otelcol-config.yaml). Traces e logs vão via push OTLP.
-  otlp:
-    metrics:
-      export:
-        url: "${OTEL_COLLECTOR_URL:http://localhost:4318}/v1/metrics"
+  # Collector coletar via scrape (ver otelcol-config.yaml) — nada de export OTLP de
+  # métricas aqui, senão duplica a série (scrape + push) no Mimir. Traces e logs
+  # continuam via push OTLP, que é o caminho certo pra esses dois.
   opentelemetry:
     tracing:
       export:

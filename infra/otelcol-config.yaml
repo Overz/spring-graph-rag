@@ -21,12 +21,13 @@ receivers:
           static_configs:
             - targets: ["127.0.0.1:8888"]
         # App roda no host durante o desenvolvimento (fora do compose); host.docker.internal
-        # alcança o processo local. Expõe /actuator/prometheus via micrometer-registry-prometheus.
+        # alcança o processo local na porta do server (APP_PORT, default 8090 — não confundir
+        # com a 3000 do Grafana). Expõe /actuator/prometheus via micrometer-registry-prometheus.
         - job_name: "spring-ai-rag"
           scrape_interval: 15s
           metrics_path: /actuator/prometheus
           static_configs:
-            - targets: ["host.docker.internal:3000"]
+            - targets: ["host.docker.internal:8090"]
 
 extensions:
   health_check:
