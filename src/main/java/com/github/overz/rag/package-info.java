@@ -8,12 +8,14 @@
  *   <li>Recuperação semântica de contexto relevante para queries</li>
  * </ul>
  *
- * <p>Dependências permitidas: {@code shared} (implícito).
+ * <p>Dependências permitidas: a interface nomeada do {@code shared} de fato usada
+ * ({@code logging}). Como {@code shared} declara {@code @NamedInterface} em seus
+ * subpacotes, a dependência unqualified {@code "shared"} não basta.
  * Comunicação com outros módulos exclusivamente via eventos Spring ou APIs públicas.
  */
 @ApplicationModule(
     displayName = "RAG Pipeline",
-    allowedDependencies = {}
+    allowedDependencies = { "shared::logging" }
 )
 package com.github.overz.rag;
 
