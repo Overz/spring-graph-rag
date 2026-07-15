@@ -5,7 +5,7 @@
 ## ADDED Requirements
 
 ### Requirement: Cadeia de validação ordenada com códigos estáveis
-O sistema SHALL executar as validações na ordem do mais barato ao mais caro — tamanho → nome → vazio → integridade estrutural → extensão × MIME real → duplicidade → cota → malware — interrompendo na primeira falha. Cada rejeição SHALL responder `ProblemDetail` (RFC 9457) via `HttpApplicationError` com `code` estável. Rejeição SHALL NOT criar linha em `documents`, gravar no storage nem publicar evento; a tentativa vai para log estruturado (RF02).
+O sistema SHALL executar as validações na ordem do mais barato ao mais caro — tamanho → nome → vazio → extensão × MIME real → integridade estrutural → duplicidade → cota → malware — interrompendo na primeira falha. (Tipo antes de integridade: conteúdo de outro formato é problema de tipo, não de corrupção — ver cenário do executável disfarçado.) Cada rejeição SHALL responder `ProblemDetail` (RFC 9457) via `HttpApplicationError` com `code` estável. Rejeição SHALL NOT criar linha em `documents`, gravar no storage nem publicar evento; a tentativa vai para log estruturado (RF02).
 
 #### Scenario: Falha interrompe sem efeitos colaterais
 - **WHEN** qualquer validação rejeita o arquivo
@@ -40,7 +40,7 @@ O sistema SHALL rejeitar arquivos de 0 bytes com `400` e `code = EMPTY_FILE` (RF
 - **THEN** rejeitado com "Arquivo vazio" (ver `validacao.feature`)
 
 ### Requirement: Integridade estrutural barata
-O sistema SHALL executar verificação estrutural leve por formato (decisão deste change, estendendo o `sdd/ingestao.md` §2): PDF exige assinatura `%PDF` e trailer `%%EOF`; imagens exigem header/footer válidos do formato. Falha rejeita com `400` e `code = CORRUPTED_FILE`. Corrupção profunda que passe neste check continua sendo responsabilidade da etapa de extração (`EXTRACTION_FAILED`, RF27, Ép. 4) (RF02).
+O sistema SHALL executar verificação estrutural leve por formato, **após** a validação de tipo (decisão deste change, estendendo o `sdd/ingestao.md` §2): PDF exige assinatura `%PDF` e trailer `%%EOF`; imagens exigem header/footer válidos do formato. Falha rejeita com `400` e `code = CORRUPTED_FILE`. Corrupção profunda que passe neste check continua sendo responsabilidade da etapa de extração (`EXTRACTION_FAILED`, RF27, Ép. 4) (RF02).
 
 #### Scenario: PDF truncado (@RF02)
 - **WHEN** upload de "corrompido.pdf" com conteúdo truncado e ilegível

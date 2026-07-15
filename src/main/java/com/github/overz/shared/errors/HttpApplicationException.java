@@ -1,4 +1,4 @@
-package com.github.overz.shared;
+package com.github.overz.shared.errors;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -8,21 +8,21 @@ import org.springframework.web.ErrorResponse;
 
 import java.util.Objects;
 
-public abstract non-sealed class HttpApplicationError extends ApplicationError implements ErrorResponse {
+public abstract non-sealed class HttpApplicationException extends ApplicationException implements ErrorResponse {
 
   private final HttpStatusCode httpStatusCode;
   private final HttpHeaders headers;
   private final ProblemDetail body;
 
-  protected HttpApplicationError(final String message) {
+  protected HttpApplicationException(final String message) {
     this(Objects.requireNonNull(message, "message"), null);
   }
 
-  protected HttpApplicationError(final String message, final Throwable cause) {
+  protected HttpApplicationException(final String message, final Throwable cause) {
     this(message, cause, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
-  protected HttpApplicationError(
+  protected HttpApplicationException(
     final String message,
     final Throwable cause,
     final HttpStatusCode httpStatusCode
@@ -30,7 +30,7 @@ public abstract non-sealed class HttpApplicationError extends ApplicationError i
     this(message, cause, httpStatusCode, HttpHeaders.EMPTY);
   }
 
-  protected HttpApplicationError(
+  protected HttpApplicationException(
     final String message,
     final Throwable cause,
     final HttpStatusCode httpStatusCode,

@@ -1,10 +1,11 @@
-package com.github.overz.api.internal.security;
+package com.github.overz.api.internal.configs;
 
+import com.github.overz.api.internal.security.CallerContextJwtConverter;
 import java.time.Duration;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -24,19 +25,26 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 class SecurityConfig {
 
-  private final CallerContextJwtConverter callerContextJwtConverter;
+  @Bean
+  CallerContextJwtConverter callerContextJwtConverter() {
+    return new CallerContextJwtConverter();
+  }
 
   @Bean
-  SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
+  SecurityFilterChain securityFilterChain(
+    final HttpSecurity http,
+    final CallerContextJwtConverter callerContextJwtConverter
+  ) throws Exception {
     http
       // API stateless com bearer token: sem sessão/cookie, CSRF não se aplica
       .csrf(AbstractHttpConfigurer::disable)
       .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
       .authorizeHttpRequests(auth -> auth
         .requestMatchers("/actuator/health/**", "/actuator/prometheus").permitAll()
+        // Roles granulares por operação (ADL-008/RF30): sem a role da rota → 403.
+        .requestMatchers(HttpMethod.POST, "/api/v1/documents").hasAuthority("document:upload")
         .anyRequest().authenticated()
       )
       .oauth2ResourceServer(oauth2 -> oauth2

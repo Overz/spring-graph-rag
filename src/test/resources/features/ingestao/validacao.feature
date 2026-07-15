@@ -1,5 +1,4 @@
 # language: pt
-@pendente
 Funcionalidade: Validação inicial de arquivos enviados
   Cobre RF02 (validações iniciais e verificação de malware), RF04 (tipos de
   arquivo suportados) e RF07 (idempotência por hash SHA-256).
@@ -96,7 +95,9 @@ Funcionalidade: Validação inicial de arquivos enviados
     E deve rejeitar a operação para evitar duplicação de entidades e vetores
     E nenhum novo evento do ciclo de vida deve ser publicado
 
-  @RF07
+  # Permanece @pendente: o comando explícito de reprocessamento (/reprocess) exige um
+  # pipeline a reexecutar — nasce com os Épicos 2+ (ver change epico-1, proposal).
+  @RF07 @pendente
   Cenário: Reprocessamento explícito de arquivo já processado é permitido
     Dado que o usuário "dev_user" do tenant "acme_inc" já enviou o arquivo "arquitetura.pdf" com sucesso
     Quando o usuário submeter o mesmo arquivo "arquitetura.pdf" com o comando explícito de reprocessamento

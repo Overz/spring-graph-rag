@@ -1,6 +1,6 @@
 package com.github.overz.api.internal.security;
 
-import com.github.overz.shared.CallerContext;
+import com.github.overz.shared.security.CallerContext;
 import java.util.Collection;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;

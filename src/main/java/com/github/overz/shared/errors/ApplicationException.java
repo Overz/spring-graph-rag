@@ -1,4 +1,4 @@
-package com.github.overz.shared;
+package com.github.overz.shared.errors;
 
 /**
  * Raiz de toda exceção lançada intencionalmente pela aplicação. Erros concretos se
@@ -6,13 +6,13 @@ package com.github.overz.shared;
  * {@code api}, erros de parsing em {@code rag}) — não por uma subclasse intermediária
  * forçada entre módulos. Ver CLAUDE.md, seção "Error Hierarchy (by Domain)".
  */
-public sealed class ApplicationError extends RuntimeException permits HttpApplicationError {
+public sealed class ApplicationException extends RuntimeException permits HttpApplicationException {
 
-  public ApplicationError(final String message) {
+  public ApplicationException(final String message) {
     this(message, null);
   }
 
-  public ApplicationError(final String message, final Throwable cause) {
+  public ApplicationException(final String message, final Throwable cause) {
     super(message, cause);
   }
 }

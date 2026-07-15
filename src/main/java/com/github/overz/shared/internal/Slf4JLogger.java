@@ -1,11 +1,11 @@
 package com.github.overz.shared.internal;
 
-import com.github.overz.shared.ILogger;
+import com.github.overz.shared.logging.ILogger;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 
 @RequiredArgsConstructor
-public final class Slf4JILogger implements ILogger {
+public final class Slf4JLogger implements ILogger {
 
   private final Logger delegate;
 

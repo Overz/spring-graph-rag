@@ -57,15 +57,16 @@ Ordem: do mais barato ao mais caro; a primeira falha interrompe e responde. Nada
 | 2 | Nome | vazio, > 255 chars, path traversal (`..`, separadores), caracteres de controle | `INVALID_FILENAME` | 400 |
 | 3 | Vazio | 0 bytes | `EMPTY_FILE` | 400 |
 | 4 | Extensão × MIME real | MIME detectado por **conteúdo** (Tika), não por extensão; ambos devem estar na lista do RF04 (PDF, JPG, JPEG, PNG, CSV, JSON, XML, TXT, MD) e ser coerentes entre si | `UNSUPPORTED_FILE_TYPE` / `MIME_MISMATCH` | 415 |
-| 5 | Duplicidade | SHA-256 já existente para o **mesmo tenant+owner** com sucesso anterior (RF07) | `DUPLICATE_FILE` | 409 |
-| 6 | Cota | cota do tenant excedida (storage total ou nº de arquivos ativos — RF03 complemento) | `QUOTA_EXCEEDED` | 422 |
-| 7 | Malware | varredura ClamAV (`clamd`) — última, por ser a mais cara; só arquivos que passaram em tudo são escaneados | `MALWARE_DETECTED` | 422 |
+| 5 | Integridade estrutural | check barato por formato, **após** o tipo (conteúdo de outro formato é problema de tipo, não corrupção): PDF exige `%PDF` + trailer `%%EOF`; JPEG exige SOI/EOI; PNG exige assinatura + `IEND` (decisão D3 do change epico-1) | `CORRUPTED_FILE` | 400 |
+| 6 | Duplicidade | SHA-256 já existente para o **mesmo tenant+owner** com sucesso anterior (RF07) | `DUPLICATE_FILE` | 409 |
+| 7 | Cota | cota do tenant excedida (storage total ou nº de arquivos ativos — RF03 complemento); **sem linha em `tenant_quotas` = sem limite** (cota opt-in, decisão D4 do change epico-1) | `QUOTA_EXCEEDED` | 422 |
+| 8 | Malware | varredura via porta `MalwareScanner` — última, por ser a mais cara; só arquivos que passaram em tudo são escaneados. **ClamAV adiado** (decisão D1 do change epico-1): o adaptador atual é um mock determinístico que detecta apenas a assinatura EICAR; a integração `clamd` real ([1.3]) troca só o adaptador | `MALWARE_DETECTED` | 422 |
 
 Notas de design:
 
 - **Rejeição não cria linha em `documents`.** Os estados `RECEIVED`/`VALIDATING` existem *dentro* da requisição síncrona; só o upload aceito persiste (com as transições `RECEIVED → VALIDATING → UPLOADED` gravadas no histórico de uma vez). Tentativas rejeitadas — em especial `MALWARE_DETECTED` e `DUPLICATE_FILE` — vão para log estruturado sempre, e para o log de auditoria quando o RF31 chegar. Alternativa descartada: persistir linhas `REJECTED` — poluiria `documents` com lixo de tentativa e criaria um estado fora do RF08.
 - **Limite multipart do container ≠ limite de negócio.** `max-file-size` do Spring fica um pouco acima de 5MB (ex.: 6MB) para que a validação nº 1 seja quem responde, com o `ProblemDetail` de domínio — e não uma exceção genérica do container ([0.5]).
-- **Corrupção profunda não é validável no upload.** Um PDF malformado que passa no MIME check falha em `EXTRACTING` → `EXTRACTION_FAILED` (RF27). A validação de integridade do RF02 cobre o detectável barato (vazio, MIME incoerente); o resto é responsabilidade da etapa de extração.
+- **Corrupção profunda não é validável no upload.** A validação de integridade do RF02 cobre o detectável barato (vazio, MIME incoerente e o check estrutural nº 5 — assinatura/trailer do formato); um PDF malformado que passe nisso tudo falha em `EXTRACTING` → `EXTRACTION_FAILED` (RF27), responsabilidade da etapa de extração.
 - `MALWARE_DETECTED` **não consome cota de reprocessamento** (RF02 complemento) — não há linha, não há contagem.
 
 ## 3. Idempotência por hash (RF07)

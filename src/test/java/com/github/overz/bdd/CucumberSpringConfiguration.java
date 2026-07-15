@@ -14,7 +14,12 @@ import org.springframework.context.annotation.Import;
 @CucumberContextConfiguration
 @SpringBootTest(
   classes = Application.class,
-  webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
+  webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+  properties = {
+    // Storage POSIX (ADR-001) apontado para dentro do target — os steps de ingestão
+    // asseguram chave/conteúdo direto no filesystem, sem depender do mount JuiceFS.
+    "app.storage.base-dir=target/bdd-blobstore"
+  }
 )
 @Import(TestcontainersConfiguration.class)
 public class CucumberSpringConfiguration {

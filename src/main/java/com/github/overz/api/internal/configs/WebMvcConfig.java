@@ -1,7 +1,8 @@
-package com.github.overz.api.internal.security;
+package com.github.overz.api.internal.configs;
 
+import com.github.overz.api.internal.security.CallerContextArgumentResolver;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -10,14 +11,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Registra o {@link CallerContextArgumentResolver} no MVC.
  */
 @Configuration
-@RequiredArgsConstructor
-class WebMvcSecurityConfig implements WebMvcConfigurer {
+class WebMvcConfig implements WebMvcConfigurer {
 
-  private final CallerContextArgumentResolver callerContextArgumentResolver;
+  @Bean
+  CallerContextArgumentResolver callerContextArgumentResolver() {
+    return new CallerContextArgumentResolver();
+  }
 
   @Override
   public void addArgumentResolvers(final List<HandlerMethodArgumentResolver> resolvers) {
-    resolvers.add(callerContextArgumentResolver);
+    resolvers.add(callerContextArgumentResolver());
   }
 
 }

@@ -1,8 +1,8 @@
 package com.github.overz.api.internal.security;
 
-import com.github.overz.shared.CallerContext;
-import com.github.overz.shared.ILogger;
-import com.github.overz.shared.LoggerFactory;
+import com.github.overz.shared.logging.ILogger;
+import com.github.overz.shared.logging.LoggerFactory;
+import com.github.overz.shared.security.CallerContext;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,7 +12,6 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
-import org.springframework.stereotype.Component;
 
 /**
  * Conversor único de claims → {@link CallerContext} (ADL-008): token sintaticamente válido
@@ -20,8 +19,7 @@ import org.springframework.stereotype.Component;
  * neste sistema. Roles de realm (claim {@code realm_access.roles}) viram authorities e
  * ficam disponíveis no contexto para as decisões de autorização das camadas seguintes.
  */
-@Component
-class CallerContextJwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
+public final class CallerContextJwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
   private static final ILogger log = LoggerFactory.of(CallerContextJwtConverter.class);
 

@@ -1,5 +1,4 @@
 # language: pt
-@pendente
 Funcionalidade: Upload e armazenamento de arquivos para ingestão no GraphRAG
   Cobre RF01 (upload de arquivo), RF03 (limites de tamanho e cotas),
   RF05 (armazenamento do original em Object Storage segregado por tenant e usuário)

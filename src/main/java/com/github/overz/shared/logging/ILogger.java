@@ -1,4 +1,4 @@
-package com.github.overz.shared;
+package com.github.overz.shared.logging;
 
 /**
  * Interface de log que toda classe usa — ver {@link LoggerFactory#of(Class)}. Centraliza

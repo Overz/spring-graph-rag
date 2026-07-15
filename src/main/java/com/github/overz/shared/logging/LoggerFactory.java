@@ -1,7 +1,6 @@
-package com.github.overz.shared;
+package com.github.overz.shared.logging;
 
-
-import com.github.overz.shared.internal.Slf4JILogger;
+import com.github.overz.shared.internal.Slf4JLogger;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 
@@ -22,7 +21,7 @@ public final class LoggerFactory {
   }
 
   public static ILogger of(final Class<?> owner) {
-    return new Slf4JILogger(logger.get(owner));
+    return new Slf4JLogger(logger.get(owner));
   }
 
 }

@@ -2,6 +2,11 @@ server:
   address: "${APP_HOST:0.0.0.0}"
   port: "${APP_PORT:8090}"
   shutdown: graceful
+  tomcat:
+    # Sem isso, upload muito acima do limite multipart faz o Tomcat abortar a conexão
+    # antes de o cliente ler a resposta — e o 413 de domínio (FILE_TOO_LARGE) nunca
+    # chega. -1 = engolir o corpo restante e responder (docs/sdd/ingestao.md §2).
+    max-swallow-size: -1
 
 spring:
   application:
@@ -59,7 +64,23 @@ management:
 
 app:
   storage:
-    # Aponta pro mount JuiceFS (ver compose.yaml); num filesystem comum funciona igual.
-    base-path: "${APP_STORAGE_RAW_PATH:@project.basedir@/tmp/blobstore/raw}"
-    raw: "${app.storage.base-path}/raw"
-    # TODO: adicionar os demais
+    # Diretório-base do adaptador POSIX do DocumentStorage (ADR-001): aponta pro mount
+    # JuiceFS (ver compose.yaml); num filesystem comum funciona igual. Os estágios
+    # (raw/extracted/transformed) são subdiretórios por chave — ver StorageLocation.
+    base-dir: "${APP_STORAGE_BASE_DIR:@project.basedir@/tmp/blobstore}"
+  upload:
+    # Parâmetros de negócio da cadeia de validação (RF02/RF03/RF04) — UploadProperties.
+    # Invariantes de formato (assinaturas mágicas, string EICAR) continuam hardcoded
+    # nos próprios validadores; só regra de negócio vive aqui.
+    max-file-size-bytes: 5242880
+    max-filename-length: 255
+    accepted-types:
+      pdf: application/pdf
+      jpg: image/jpeg
+      jpeg: image/jpeg
+      png: image/png
+      csv: text/csv,text/plain
+      json: application/json,text/plain
+      xml: application/xml,text/xml
+      txt: text/plain
+      md: text/markdown,text/x-web-markdown,text/plain

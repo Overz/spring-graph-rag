@@ -32,6 +32,7 @@ public class SegurancaSteps {
 
   private final HttpHeaders requestHeaders = new HttpHeaders();
   private ResponseEntity<String> response;
+  private long documentosBaseline;
 
   @Dado("que o usuário {string} executou a ação de {string} sobre um documento")
   public void queOUsuarioStringExecutouAAcaoDeString(String p1, String p2) {
@@ -76,6 +77,7 @@ public class SegurancaSteps {
   @Dado("uma requisição de upload sem token de autenticação")
   public void umaRequisicaoDeUploadSemTokenDeAutenticacao() {
     requestHeaders.remove(HttpHeaders.AUTHORIZATION);
+    documentosBaseline = contarDocumentos();
   }
 
   @Quando("a requisição chegar à API")
@@ -101,13 +103,21 @@ public class SegurancaSteps {
 
   @Entao("nenhum processamento deve ser iniciado")
   public void nenhumProcessamentoDeveSerIniciado() {
-    final var documentos = jdbc.queryForObject("SELECT count(*) FROM documents", Long.class);
-    assertThat(documentos).isZero();
+    // Delta, não zero absoluto: as features de ingestão (Épico 1) criam documentos
+    // legítimos na mesma execução da suíte — o que este cenário garante é que a
+    // requisição rejeitada não iniciou processamento NOVO.
+    assertThat(contarDocumentos()).isEqualTo(documentosBaseline);
   }
 
   @Dado("uma requisição com token JWT expirado")
   public void umaRequisicaoComTokenJwtExpirado() {
     requestHeaders.setBearerAuth(KeycloakTokens.expiredToken(issuerUri, "alice"));
+    documentosBaseline = contarDocumentos();
+  }
+
+  private long contarDocumentos() {
+    final var total = jdbc.queryForObject("SELECT count(*) FROM documents", Long.class);
+    return total == null ? 0 : total;
   }
 
   @Dado("que um agente externo aciona uma ferramenta MCP sem credenciais válidas")

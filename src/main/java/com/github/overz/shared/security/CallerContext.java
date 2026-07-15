@@ -1,5 +1,9 @@
-package com.github.overz.shared;
+package com.github.overz.shared.security;
 
+import lombok.Builder;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.Serializable;
 import java.util.Set;
 
 /**
@@ -11,9 +15,16 @@ import java.util.Set;
  * @param ownerId  claim {@code sub} (identidade estável do usuário no realm)
  * @param roles    roles de realm granulares por operação (ex.: {@code document:upload})
  */
-public record CallerContext(String tenantId, String ownerId, Set<String> roles) {
+@Builder
+public record CallerContext(String tenantId, String ownerId, Set<String> roles) implements Serializable {
 
   public CallerContext {
+    if (StringUtils.isBlank(tenantId)) {
+      throw new IllegalArgumentException("tenantId não pode ser vazio");
+    }
+    if (StringUtils.isBlank(ownerId)) {
+      throw new IllegalArgumentException("ownerId não pode ser vazio");
+    }
     roles = Set.copyOf(roles);
   }
 
