@@ -159,6 +159,15 @@ House rules for **all** code in this repository.
 
 Definition of Done for every backlog task: its `@RFxx` scenarios pass without `@pendente`.
 
+## HTTP Request Files
+
+Every endpoint — one this project **serves** (a controller) or one it **consumes** (e.g. the
+Keycloak token endpoint) — gets a `.http` request file under `docs/http/<domain>/`, one file
+per domain folder (`ingestao/`, `keycloak/`, ...), numbered in call sequence (`01-`, `02-`, ...).
+A file documents every request needed to actually exercise the endpoint (auth included) —
+not just a bare example. When a new controller or an external dependency lands, add its
+`.http` file in the same change.
+
 ## Dev Mode Entrypoint
 
 `TestApplication` (in `src/test/`) runs the real `Application` with Testcontainers instead of Docker Compose:

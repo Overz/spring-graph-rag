@@ -1,0 +1,21 @@
+### Keycloak — obtenção de access_token (RF35 / ADL-008)
+### Endpoint CONSUMIDO pela API (não é um endpoint deste projeto) — documentado aqui
+### porque toda chamada autenticada em docs/http/** depende dele.
+### Pré-requisito: `docker compose up -d keycloak postgres` (realm `graphrag` já
+### importado de infra/keycloak/data/import/graphrag-realm.json).
+### Convenção do realm de DEV: senha = username.
+
+@issuer = http://localhost:8080/realms/graphrag
+@clientId = graphrag-api
+@username = alice
+@password = alice
+
+### Login — usuário "alice" (tenant acme_inc, role document:upload)
+# @name login
+POST {{issuer}}/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id={{clientId}}&username={{username}}&password={{password}}
+
+### Copie o campo "access_token" da resposta acima e cole na variável @token
+### do arquivo .http do domínio que você for chamar (ex.: docs/http/ingestao/01-upload-documento.http).

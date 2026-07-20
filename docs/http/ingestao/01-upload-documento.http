@@ -1,0 +1,30 @@
+### RF01/RF02/RF03/RF04/RF06/RF07 — Upload de documento
+### POST /api/v1/documents — multipart, role "document:upload" exigida (SecurityConfig).
+### Token: rode docs/http/keycloak/01-obter-token.http e cole o access_token abaixo.
+
+@baseUrl = http://localhost:8090
+@token = COLE_AQUI_O_ACCESS_TOKEN
+
+### Upload aceito (202) — troque o caminho abaixo por um arquivo local válido
+### (PDF/JPG/JPEG/PNG/CSV/JSON/XML/TXT/MD — ver app.upload.accepted-types no application.yaml)
+POST {{baseUrl}}/api/v1/documents
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="documento.pdf"
+Content-Type: application/pdf
+
+< ./caminho/para/seu-arquivo.pdf
+--WebAppBoundary--
+
+### Sem token (RF35) — espera 401
+POST {{baseUrl}}/api/v1/documents
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="documento.pdf"
+Content-Type: application/pdf
+
+< ./caminho/para/seu-arquivo.pdf
+--WebAppBoundary--
