@@ -14,6 +14,6 @@ import java.util.Set;
 public record UploadProperties(
   long maxFileSizeBytes,
   int maxFilenameLength,
-  Map<String, Set<String>> acceptedTypes
+  Map<FileType, Set<String>> acceptedTypes
 ) {
 }

@@ -18,6 +18,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.SupplierJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import static com.github.overz.shared.support.SecurityAuthorities.DOCUMENT_UPLOAD;
+
 /**
  * API stateless protegida por JWT (RF35/ADL-008): nenhuma rota aberta além das
  * explicitamente liberadas — health probe e scrape de métricas do OTel Collector
@@ -44,7 +46,7 @@ class SecurityConfig {
       .authorizeHttpRequests(auth -> auth
         .requestMatchers("/actuator/health/**", "/actuator/prometheus").permitAll()
         // Roles granulares por operação (ADL-008/RF30): sem a role da rota → 403.
-        .requestMatchers(HttpMethod.POST, "/api/v1/documents").hasAuthority("document:upload")
+        .requestMatchers(HttpMethod.POST, "/api/v1/documents").hasAuthority(DOCUMENT_UPLOAD)
         .anyRequest().authenticated()
       )
       .oauth2ResourceServer(oauth2 -> oauth2
@@ -63,8 +65,8 @@ class SecurityConfig {
   JwtDecoder jwtDecoder(
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") final String issuer
   ) {
-    final var decoder = NimbusJwtDecoder.withIssuerLocation(issuer).build();
     return new SupplierJwtDecoder(() -> {
+      final var decoder = NimbusJwtDecoder.withIssuerLocation(issuer).build();
       decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
         new JwtIssuerValidator(issuer),
         new JwtTimestampValidator(Duration.ZERO)

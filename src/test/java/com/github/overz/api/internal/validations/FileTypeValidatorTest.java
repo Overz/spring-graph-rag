@@ -1,5 +1,6 @@
 package com.github.overz.api.internal.validations;
 
+import com.github.overz.api.internal.configs.FileType;
 import com.github.overz.api.internal.configs.UploadProperties;
 import com.github.overz.api.internal.dtos.UploadCandidate;
 import com.github.overz.api.internal.errors.MimeMismatchException;
@@ -23,7 +24,7 @@ class FileTypeValidatorTest extends Assertions {
   void aceitaExtensaoEConteudoCoerentes() throws Exception {
     final var content = tempDir.resolve("documento.pdf");
     Files.write(content, SyntheticFiles.of("documento.pdf", 1024));
-    final var validator = new FileTypeValidator(new UploadProperties(0, 255, Map.of("pdf", Set.of("application/pdf"))));
+    final var validator = new FileTypeValidator(new UploadProperties(0, 255, Map.of(FileType.PDF, Set.of("application/pdf"))));
 
     assertDoesNotThrow(() ->
       validator.validate(UploadCandidate.builder().filename("documento.pdf").content(content).build()));
@@ -33,7 +34,7 @@ class FileTypeValidatorTest extends Assertions {
   void rejeitaExtensaoForaDaListaAceita() throws Exception {
     final var content = tempDir.resolve("documento.exe");
     Files.write(content, SyntheticFiles.windowsExecutable());
-    final var validator = new FileTypeValidator(new UploadProperties(0, 255, Map.of("pdf", Set.of("application/pdf"))));
+    final var validator = new FileTypeValidator(new UploadProperties(0, 255, Map.of(FileType.PDF, Set.of("application/pdf"))));
 
     assertThrows(UnsupportedFileTypeException.class, () ->
       validator.validate(UploadCandidate.builder().filename("documento.exe").content(content).build()));
@@ -44,8 +45,8 @@ class FileTypeValidatorTest extends Assertions {
     final var content = tempDir.resolve("disfarcado.pdf");
     Files.write(content, SyntheticFiles.of("qualquer.png", 1024));
     final var validator = new FileTypeValidator(new UploadProperties(0, 255, Map.of(
-      "pdf", Set.of("application/pdf"),
-      "png", Set.of("image/png")
+      FileType.PDF, Set.of("application/pdf"),
+      FileType.PNG, Set.of("image/png")
     )));
 
     assertThrows(MimeMismatchException.class, () ->

@@ -24,7 +24,10 @@ public class DocumentUploadController {
 
   private final DocumentUploadService documentUploadService;
 
-  @PostMapping(path = "/api/v1/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PostMapping(
+    path = { "/api/v1/documents" },
+    consumes = { MediaType.MULTIPART_FORM_DATA_VALUE }
+  )
   @ResponseStatus(HttpStatus.ACCEPTED)
   UploadAcceptedResponse upload(
     @RequestParam("file") final MultipartFile file,

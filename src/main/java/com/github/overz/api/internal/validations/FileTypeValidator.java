@@ -1,5 +1,6 @@
 package com.github.overz.api.internal.validations;
 
+import com.github.overz.api.internal.configs.FileType;
 import com.github.overz.api.internal.configs.UploadProperties;
 import com.github.overz.api.internal.dtos.UploadCandidate;
 import com.github.overz.api.internal.errors.MimeMismatchException;
@@ -31,7 +32,8 @@ public final class FileTypeValidator implements UploadValidator {
 
   @Override
   public void validate(final UploadCandidate candidate) {
-    final var extension = candidate.extension();
+    final var extension = FileType.find(candidate.extension())
+      .orElseThrow(() -> new UnsupportedFileTypeException("extensão '." + candidate.extension() + "' não é aceita"));
     final var acceptedMimes = properties.acceptedTypes().get(extension);
     if (acceptedMimes == null) {
       throw new UnsupportedFileTypeException("extensão '." + extension + "' não é aceita");
@@ -42,7 +44,7 @@ public final class FileTypeValidator implements UploadValidator {
       return;
     }
     if (allAccepted().contains(detected)) {
-      throw new MimeMismatchException(extension, detected);
+      throw new MimeMismatchException(candidate.extension(), detected);
     }
     throw new UnsupportedFileTypeException(detected);
   }
