@@ -1,5 +1,6 @@
 package com.github.overz.api.internal.auth;
 
+import com.github.overz.shared.support.OpaqueTokenGenerator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

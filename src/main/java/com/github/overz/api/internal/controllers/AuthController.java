@@ -1,5 +1,9 @@
-package com.github.overz.api.internal.auth;
+package com.github.overz.api.internal.controllers;
 
+import com.github.overz.api.internal.dtos.LoginRequest;
+import com.github.overz.api.internal.dtos.PhantomTokenResponse;
+import com.github.overz.api.internal.mappers.AuthResponseMapper;
+import com.github.overz.api.internal.security.PhantomTokenIssuer;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;

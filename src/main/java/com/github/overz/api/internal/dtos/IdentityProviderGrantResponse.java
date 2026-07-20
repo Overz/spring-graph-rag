@@ -1,8 +1,8 @@
-package com.github.overz.api.internal.auth;
+package com.github.overz.api.internal.dtos;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-record KeycloakGrantResponse(
+public record IdentityProviderGrantResponse(
   @JsonProperty("access_token") String accessToken,
   @JsonProperty("refresh_token") String refreshToken,
   @JsonProperty("expires_in") long expiresIn,

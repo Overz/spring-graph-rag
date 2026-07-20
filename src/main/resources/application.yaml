@@ -10,13 +10,13 @@ server:
 
 spring:
   application:
-    name: @project.artifactId@
+    name: "@project.artifactId@"
   security:
     oauth2:
       resourceserver:
         jwt:
           # Realm graphrag do Keycloak local (ADL-008) — validação por JWKS
-          issuer-uri: "${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/graphrag}"
+          issuer-uri: "${IDENTITY_PROVIDER_ISSUER_URI:http://localhost:8080/realms/graphrag}"
   data:
     redis:
       host: "${REDIS_HOST:localhost}"
@@ -52,7 +52,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, prometheus
+        include:
+          - health
+          - prometheus
   # Métricas em formato Prometheus ficam expostas em /actuator/prometheus para o OTel
   # Collector coletar via scrape (ver otelcol-config.yaml) — nada de export OTLP de
   # métricas aqui, senão duplica a série (scrape + push) no Mimir. Traces e logs
@@ -93,4 +95,5 @@ app:
     # Login por phantom token (RF35, ADR-004): client fixo do realm graphrag, mesmo client
     # que graphrag-api já usa nos fluxos de teste (KeycloakTokens) — grant_type é fixo no
     # código (password no login, refresh_token no refresh), não vem de configuração.
-    keycloak-client-id: graphrag-api
+    identity-provider-auth-uri: "${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/token"
+    identity-provider-client-id: "graphrag-api"

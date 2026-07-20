@@ -1,47 +1,32 @@
 package com.github.overz.api.internal.configs;
 
-import com.github.overz.api.internal.auth.AuthController;
-import com.github.overz.api.internal.auth.KeycloakTokenClient;
-import com.github.overz.api.internal.auth.OpaqueTokenGenerator;
-import com.github.overz.api.internal.auth.PhantomTokenIssuer;
-import com.github.overz.api.internal.auth.PhantomTokenIssuerImpl;
-import com.github.overz.api.internal.auth.PhantomTokenRepository;
-import org.springframework.beans.factory.annotation.Value;
+import com.github.overz.api.internal.controllers.AuthController;
+import com.github.overz.api.internal.repositories.PhantomTokenRedisRepository;
+import com.github.overz.api.internal.repositories.PhantomTokenRepository;
+import com.github.overz.api.internal.security.PhantomTokenIssuer;
+import com.github.overz.api.internal.security.PhantomTokenIssuerImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.web.client.RestClient;
 
 /** Wiring do login por phantom token (RF35, ADR-004) — nenhuma classe do fluxo leva estereótipo. */
 @Configuration
 class AuthConfig {
 
   @Bean
-  KeycloakTokenClient keycloakTokenClient(
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") final String issuer,
-    final AuthProperties properties
-  ) {
-    return new KeycloakTokenClient(issuer, properties.keycloakClientId());
-  }
-
-  @Bean
   PhantomTokenRepository phantomTokenRepository(final StringRedisTemplate redisTemplate) {
-    return new PhantomTokenRepository(redisTemplate);
-  }
-
-  @Bean
-  OpaqueTokenGenerator opaqueTokenGenerator() {
-    return new OpaqueTokenGenerator();
+    return new PhantomTokenRedisRepository(redisTemplate);
   }
 
   @Bean
   PhantomTokenIssuer phantomTokenIssuer(
-    final KeycloakTokenClient keycloakTokenClient,
+    final AuthProperties properties,
     final PhantomTokenRepository phantomTokenRepository,
-    final OpaqueTokenGenerator opaqueTokenGenerator,
     final JwtDecoder jwtDecoder
   ) {
-    return new PhantomTokenIssuerImpl(keycloakTokenClient, phantomTokenRepository, opaqueTokenGenerator, jwtDecoder);
+    return new PhantomTokenIssuerImpl(RestClient.create(), properties, phantomTokenRepository, jwtDecoder);
   }
 
   @Bean

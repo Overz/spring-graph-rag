@@ -1,4 +1,4 @@
-package com.github.overz.api.internal.configs;
+package com.github.overz.api.internal.dtos;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 

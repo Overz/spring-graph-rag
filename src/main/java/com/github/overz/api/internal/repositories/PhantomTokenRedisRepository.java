@@ -1,5 +1,6 @@
-package com.github.overz.api.internal.auth;
+package com.github.overz.api.internal.repositories;
 
+import com.github.overz.api.internal.dtos.CachedSession;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -14,7 +15,7 @@ import java.util.Set;
  * módulo. TTL da chave é sempre a janela de refresh do Keycloak, não a do access token.
  */
 @RequiredArgsConstructor
-public final class PhantomTokenRepository {
+public final class PhantomTokenRedisRepository implements PhantomTokenRepository {
 
   private static final String KEY_PREFIX = "phantom-token:";
   private static final String FIELD_TENANT_ID = "tenantId";
@@ -25,7 +26,8 @@ public final class PhantomTokenRepository {
 
   private final StringRedisTemplate redis;
 
-  void save(final String token, final CachedSession session, final long ttlSeconds) {
+  @Override
+  public void save(final String token, final CachedSession session, final long ttlSeconds) {
     final var key = KEY_PREFIX + token;
     final var ops = redis.<String, String>opsForHash();
     ops.put(key, FIELD_TENANT_ID, session.tenantId());
@@ -35,7 +37,8 @@ public final class PhantomTokenRepository {
     redis.expire(key, Duration.ofSeconds(ttlSeconds));
   }
 
-  Optional<CachedSession> find(final String token) {
+  @Override
+  public Optional<CachedSession> find(final String token) {
     final var entries = redis.<String, String>opsForHash().entries(KEY_PREFIX + token);
     if (entries.isEmpty()) {
       return Optional.empty();
@@ -52,7 +55,8 @@ public final class PhantomTokenRepository {
     ));
   }
 
-  void delete(final String token) {
+  @Override
+  public void delete(final String token) {
     redis.delete(KEY_PREFIX + token);
   }
 

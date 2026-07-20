@@ -1,5 +1,6 @@
 package com.github.overz.api.internal.configs;
 
+import com.github.overz.api.internal.dtos.FileType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.Map;

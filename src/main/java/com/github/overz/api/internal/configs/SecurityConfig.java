@@ -1,6 +1,6 @@
 package com.github.overz.api.internal.configs;
 
-import com.github.overz.api.internal.auth.PhantomTokenIssuer;
+import com.github.overz.api.internal.security.PhantomTokenIssuer;
 import com.github.overz.api.internal.security.CallerContextJwtConverter;
 import com.github.overz.api.internal.security.PhantomTokenAuthenticationProvider;
 import jakarta.servlet.http.HttpServletRequest;

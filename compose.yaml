@@ -4,6 +4,7 @@ volumes:
   opensearch_data:
   ollama_data:
   redis_data:
+  redisinsight_data:
 
 networks:
   app:
@@ -271,6 +272,35 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
+    networks:
+      - app
+
+  # UI pra inspecionar o Redis (metadata do JuiceFS + phantom-token store, ADR-004) — mesmo
+  # padrão do adminer pro Postgres. RI_REDIS_* pré-cadastra a conexão no primeiro start;
+  # se a imagem não reconhecer essas variáveis, adicione manualmente na UI (host redis-svc,
+  # porta 6379).
+  redisinsight:
+    image: 'redis/redisinsight:latest'
+    hostname: 'redisinsight-svc'
+    restart: 'always'
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.1'
+          memory: '128Mb'
+        limits:
+          cpus: '0.5'
+          memory: '256Mb'
+    environment:
+      RI_REDIS_HOST: redis-svc
+      RI_REDIS_PORT: 6379
+      RI_REDIS_ALIAS: redis-svc
+    ports:
+      - '5540:5540'
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      - redis
     networks:
       - app
 

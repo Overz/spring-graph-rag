@@ -1,6 +1,6 @@
 package com.github.overz.api.internal.validations;
 
-import com.github.overz.api.internal.configs.FileType;
+import com.github.overz.api.internal.dtos.FileType;
 import com.github.overz.api.internal.configs.UploadProperties;
 import com.github.overz.api.internal.dtos.UploadCandidate;
 import com.github.overz.api.internal.errors.MimeMismatchException;

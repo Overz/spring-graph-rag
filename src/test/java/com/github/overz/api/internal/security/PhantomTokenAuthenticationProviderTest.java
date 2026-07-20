@@ -1,7 +1,6 @@
 package com.github.overz.api.internal.security;
 
-import com.github.overz.api.internal.auth.PhantomToken;
-import com.github.overz.api.internal.auth.PhantomTokenIssuer;
+import com.github.overz.api.internal.dtos.PhantomToken;
 import com.github.overz.shared.security.CallerContext;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

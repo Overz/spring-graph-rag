@@ -1,4 +1,4 @@
-package com.github.overz.api.internal.auth;
+package com.github.overz.api.internal.dtos;
 
 import lombok.Builder;
 
