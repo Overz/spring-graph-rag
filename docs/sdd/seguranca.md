@@ -28,6 +28,8 @@
 - Um conversor único materializa o `CallerContext {tenantId, ownerId, roles}` das claims — token **sem claim `tenantId` é rejeitado** (401): identidade sem tenant não existe neste sistema.
 - Controllers e tools só enxergam `CallerContext`; nenhum código de domínio lê JWT cru.
 
+> **Proposto, ainda não implementado:** `openspec/changes/auth-phantom-token` endurece o login de usuário final com o padrão **Phantom Token** (Redis) — a API emite um token opaco em vez do JWT cru, resolvido internamente a cada requisição; JWT direto continua valendo para os service accounts MCP (client_credentials), inalterado. Decisões de arquitetura (módulo novo vs. pacote em `api`, schema Redis, resolução dual de token) estão registradas no `design.md` do change, pendentes de confirmação.
+
 ## 2. Isolamento multitenant — AuthZ (RF30)
 
 Três camadas, todas obrigatórias (defesa em profundidade):
