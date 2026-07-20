@@ -39,7 +39,7 @@ Coherence rule: requirements beat everything; BDD and the SDD beat the plan (the
 
 > OpenSpec is the backlog-execution layer (one change per épico, referencing the SDD): active changes live in `openspec/changes/`, finished ones are archived under `openspec/changes/archive/` and their delta specs are synced into `openspec/specs/` (the catalog of what is actually implemented).
 
-**Proposed (not yet implemented): `openspec/changes/auth-phantom-token`.** Hardens the RF35/[9.4] user-login flow with the Phantom Token pattern (Redis-backed): the API issues an opaque token to the end user instead of the raw Keycloak JWT, and resolves it internally per request — service-account/MCP JWTs are unaffected. Key open decisions (new `auth` Spring Modulith module vs. a package inside `api`; endpoint paths; whether logout ships in the same change) are logged in the change's `design.md` and await confirmation before implementation starts.
+**Proposed (not yet implemented): `openspec/changes/auth-phantom-token`.** Hardens the RF35/[9.4] user-login flow with the Phantom Token pattern (Redis-backed): the API issues an opaque token to the end user instead of the raw Keycloak JWT, and resolves it internally per request — service-account/MCP JWTs are unaffected. Lives inside `api` as a new `api/internal/auth/` package (not a new Spring Modulith module — `mcp` never does password-grant login, so there's nothing else that would consume it), a second documented layout exception alongside `shared`. Remaining open decisions (endpoint paths; whether logout ships in the same change) are logged in the change's `design.md`.
 
 ## Build & Run Commands
 

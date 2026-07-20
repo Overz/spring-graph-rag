@@ -8,7 +8,7 @@ Hoje o usuário obtém o JWT direto do Keycloak (client `graphrag-api`, grant `p
 - App passa a fazer o password grant contra o Keycloak internamente (hoje isso só existe no `KeycloakTokens.java` de teste) e guarda o JWT/claims resultantes no Redis, chaveado pelo token opaco devolvido ao cliente, com TTL = expiração do token real.
 - **BREAKING** para o fluxo de resource server: rotas protegidas passam a aceitar o token opaco (phantom) do novo login além do JWT direto do Keycloak (necessário porque os service accounts MCP/client_credentials continuam usando JWT cru — RF35 exige autenticação idêntica pra REST e MCP, mas a origem do token é diferente por tipo de chamador). O `SecurityConfig` precisa resolver os dois formatos.
 - Contrato do(s) endpoint(s) exposto via interface (ex. `PhantomTokenIssuer`), preparando espaço para trocar a estratégia de token store ou adicionar uma versão futura sem tocar no controller.
-- Novo pacote/módulo `auth` (decisão de escopo exato — módulo Spring Modulith novo vs. pacote dentro de `api` — registrada em `design.md`).
+- Novo pacote `api/internal/auth/` (exceção pontual ao layout por camada, mesmo tratamento que `shared` já recebe — ver `design.md` D1; decisão de manter dentro de `api`, sem módulo Spring Modulith novo, porque `mcp` nunca faz login de usuário — só client_credentials).
 - Nova dependência `spring-boot-starter-data-redis`; reuso da instância Redis já existente no `compose.yaml` (hoje só metadata do JuiceFS, database lógico `1`) num database lógico diferente.
 
 ## Capabilities
@@ -21,8 +21,8 @@ Hoje o usuário obtém o JWT direto do Keycloak (client `graphrag-api`, grant `p
 
 ## Impact
 
-- **Código:** `SecurityConfig`/`CallerContextJwtConverter` (api) ganham um caminho de resolução dual (JWT vs. opaco); novo pacote/módulo `auth` com o(s) controller(s), o cliente HTTP pro Keycloak (password grant) e o repositório Redis do phantom token.
+- **Código:** `SecurityConfig`/`CallerContextJwtConverter` (api) ganham um caminho de resolução dual (JWT vs. opaco); novo pacote `api/internal/auth/` com o(s) controller(s), o cliente HTTP pro Keycloak (password grant) e o repositório Redis do phantom token.
 - **Dependências:** `spring-boot-starter-data-redis` no `pom.xml`; `TestcontainersConfiguration` ganha container Redis (hoje só Postgres/Neo4j/Keycloak).
 - **Infra:** nenhuma mudança em `compose.yaml` — reusa o serviço `redis` já existente, com database lógico diferente do usado pelo JuiceFS.
-- **Docs:** `docs/sdd/seguranca.md` §1 (novo fluxo), `CLAUDE.md` (Architecture/Module Dependency Rules se módulo novo), `docs/rag-plan.md` ([9.4]), `docs/http/auth/*.http` novos, possível ADR novo dado o peso arquitetural da decisão módulo-vs-pacote e da estratégia de resolução dual de token.
+- **Docs:** `docs/sdd/seguranca.md` §1 (novo fluxo), `CLAUDE.md` (Package layout — `auth/` como segunda exceção pontual ao lado de `shared`), `docs/rag-plan.md` ([9.4]), `docs/http/auth/*.http` novos, possível ADR novo pra estratégia de resolução dual de token (D2).
 - **Fora de escopo deste change:** MCP continua recebendo JWT direto (client_credentials) — não migra pra phantom token aqui; refresh token e múltiplas sessões concorrentes por usuário ficam para um change futuro, se necessário.
