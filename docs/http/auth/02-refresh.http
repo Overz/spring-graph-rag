@@ -1,0 +1,15 @@
+### RF35 (ADR-004) — Renovação de sessão sem novo login
+### POST /api/v1/auth/refresh — grant_type=refresh_token fixo internamente. Token opaco do
+### cliente NÃO muda; só o estado atrás dele no Redis é renovado. Rode
+### docs/http/auth/01-login.http primeiro e cole o token abaixo.
+
+@baseUrl = http://localhost:8090
+@token = COLE_AQUI_O_TOKEN_DO_LOGIN
+
+### Refresh de sessão válida — 200, mesmo "token" da resposta do login
+POST {{baseUrl}}/api/v1/auth/refresh
+Authorization: Bearer {{token}}
+
+### Refresh com token inexistente/expirado/revogado — espera 401 (INVALID_PHANTOM_TOKEN)
+POST {{baseUrl}}/api/v1/auth/refresh
+Authorization: Bearer token-que-nao-existe

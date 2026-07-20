@@ -1,0 +1,25 @@
+### RF35 (ADR-004) — Login de usuário via Phantom Token
+### POST /api/v1/auth/login — realm graphrag e grant_type=password fixos internamente.
+### Devolve um token opaco (nunca o JWT real do Keycloak) — use-o como Bearer nas demais
+### chamadas. Usuário seedado de exemplo: alice/alice (tenant acme_inc, ver
+### infra/keycloak/data/import/graphrag-realm.json).
+
+@baseUrl = http://localhost:8090
+
+### Login com credenciais válidas — 200, corpo { "token": "...", "expiresInSeconds": ... }
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "alice"
+}
+
+### Login com senha incorreta — espera 401 (INVALID_CREDENTIALS)
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "senha-errada"
+}

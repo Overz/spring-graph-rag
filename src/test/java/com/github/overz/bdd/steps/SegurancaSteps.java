@@ -11,9 +11,12 @@ import io.cucumber.datatable.DataTable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
+
+import java.util.Map;
 
 /**
  * Steps da área seguranca — os cenários de token (@RF35) estão automatizados; os demais
@@ -33,6 +36,8 @@ public class SegurancaSteps {
   private final HttpHeaders requestHeaders = new HttpHeaders();
   private ResponseEntity<String> response;
   private long documentosBaseline;
+  private String phantomToken;
+  private String phantomTokenAposRefresh;
 
   @Dado("que o usuário {string} executou a ação de {string} sobre um documento")
   public void queOUsuarioStringExecutouAAcaoDeString(String p1, String p2) {
@@ -113,6 +118,85 @@ public class SegurancaSteps {
   public void umaRequisicaoComTokenJwtExpirado() {
     requestHeaders.setBearerAuth(KeycloakTokens.expiredToken(issuerUri, "alice"));
     documentosBaseline = contarDocumentos();
+  }
+
+  @Quando("o usuário {string} fizer login com a senha correta")
+  public void oUsuarioStringFizerLoginComASenhaCorreta(String username) {
+    response = login(username, username);
+  }
+
+  @Quando("o usuário {string} fizer login com a senha {string}")
+  public void oUsuarioStringFizerLoginComASenhaString(String username, String senha) {
+    response = login(username, senha);
+  }
+
+  @Entao("o login deve ser aceito e o token devolvido não deve ter formato de JWT")
+  public void oLoginDeveSerAceitoEOTokenDevolvidoNaoDeveTerFormatoDeJwt() {
+    assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+    assertThat(extractToken(response.getBody()).chars().filter(c -> c == '.').count()).isZero();
+  }
+
+  @Dado("que o usuário {string} fez login e obteve um token opaco")
+  public void queOUsuarioStringFezLoginEObteveUmTokenOpaco(String username) {
+    phantomToken = extractToken(login(username, username).getBody());
+  }
+
+  @Quando("a requisição chegar à API usando o token opaco")
+  public void aRequisicaoChegarAApiUsandoOTokenOpaco() {
+    response = post("/api/v1/documents", phantomToken);
+  }
+
+  @Entao("a resposta não deve ser {string}")
+  public void aRespostaNaoDeveSerString(String naoEsperado) {
+    final var codigoNaoEsperado = Integer.parseInt(naoEsperado.split(" ")[0]);
+    assertThat(response.getStatusCode().value()).isNotEqualTo(codigoNaoEsperado);
+  }
+
+  @Quando("o usuário fizer logout com o token opaco")
+  public void oUsuarioFizerLogoutComOTokenOpaco() {
+    response = post("/api/v1/auth/logout", phantomToken);
+  }
+
+  @Quando("o usuário chamar o endpoint de refresh com o token opaco")
+  public void oUsuarioChamarOEndpointDeRefreshComOTokenOpaco() {
+    phantomTokenAposRefresh = extractToken(post("/api/v1/auth/refresh", phantomToken).getBody());
+  }
+
+  @Entao("o token opaco devolvido deve ser igual ao anterior")
+  public void oTokenOpacoDevolvidoDeveSerIgualAoAnterior() {
+    assertThat(phantomTokenAposRefresh).isEqualTo(phantomToken);
+  }
+
+  private ResponseEntity<String> login(final String username, final String password) {
+    return RestClient.builder()
+      .baseUrl("http://localhost:" + port)
+      .build()
+      .post()
+      .uri("/api/v1/auth/login")
+      .contentType(MediaType.APPLICATION_JSON)
+      .body(Map.of("username", username, "password", password))
+      .retrieve()
+      .onStatus(status -> true, (request, clientResponse) -> { /* não lançar em 4xx/5xx */ })
+      .toEntity(String.class);
+  }
+
+  private ResponseEntity<String> post(final String uri, final String bearerToken) {
+    return RestClient.builder()
+      .baseUrl("http://localhost:" + port)
+      .build()
+      .post()
+      .uri(uri)
+      .headers(headers -> headers.setBearerAuth(bearerToken))
+      .retrieve()
+      .onStatus(status -> true, (request, clientResponse) -> { /* não lançar em 4xx/5xx */ })
+      .toEntity(String.class);
+  }
+
+  private static String extractToken(final String jsonBody) {
+    final var marker = "\"token\":\"";
+    final var start = jsonBody.indexOf(marker) + marker.length();
+    final var end = jsonBody.indexOf('"', start);
+    return jsonBody.substring(start, end);
   }
 
   private long contarDocumentos() {

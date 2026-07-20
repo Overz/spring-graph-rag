@@ -39,7 +39,7 @@ Coherence rule: requirements beat everything; BDD and the SDD beat the plan (the
 
 > OpenSpec is the backlog-execution layer (one change per épico, referencing the SDD): active changes live in `openspec/changes/`, finished ones are archived under `openspec/changes/archive/` and their delta specs are synced into `openspec/specs/` (the catalog of what is actually implemented).
 
-**Proposed (not yet implemented): `openspec/changes/auth-phantom-token`, `docs/adr/ADR-004-phantom-token-login.md`.** Hardens the RF35/[9.4] user-login flow with the Phantom Token pattern (Redis-backed): `POST /api/v1/auth/{login,refresh,logout}` issue/renew/revoke an opaque token for the end user instead of the raw Keycloak JWT, resolved internally per request — service-account/MCP JWTs are unaffected. Lives inside `api` as a new `api/internal/auth/` package (not a new Spring Modulith module — `mcp` never does password-grant login, so there's nothing else that would consume it), a second documented layout exception alongside `shared`.
+**Done (July/2026, change `openspec/changes/auth-phantom-token`, `docs/adr/ADR-004-phantom-token-login.md`).** RF35/[9.4] user-login hardened with the Phantom Token pattern (Redis-backed): `POST /api/v1/auth/{login,refresh,logout}` issue/renew/revoke an opaque token for the end user instead of the raw Keycloak JWT, resolved internally per request via `AuthenticationManagerResolver` (`SecurityConfig`) — service-account/MCP JWTs are unaffected, both formats converge on the same `CallerContext`. Lives inside `api` as a new `api/internal/auth/` package (not a new Spring Modulith module — `mcp` never does password-grant login, so there's nothing else that would consume it), a second documented layout exception alongside `shared`. New `spring.data.redis.*` (db `2` — db `1` is JuiceFS) and `app.auth.keycloak-client-id` config.
 
 ## Build & Run Commands
 
@@ -128,6 +128,7 @@ House rules for **all** code in this repository.
 
 - Inside each module's `internal/` (or the module root for its public API): `configs/`, `controllers/`, `services/`, `repositories/`, `models/`, `dtos/`, `validations/`, `security/`, `mappers/`, `errors/`. Whatever doesn't fit stays unpackaged.
 - `shared` is the exception: it organizes by `@NamedInterface` (`errors`, `logging`, `security`, `storage`, `support`, ...) instead, since that's the surface Spring Modulith actually enforces for `shared` — don't force the `api`/`rag`-style folder set onto it.
+- `api/internal/auth/` is a second, deliberate exception: the phantom-token login flow (RF35, ADR-004) is a small, coherent sub-domain (controller, `PhantomTokenIssuer` port + implementation, Redis repository, token generator, its own exceptions) kept together in one package instead of spread across `controllers/services/security/errors/` — not a precedent for reintroducing domain folders elsewhere.
 - Code used by more than one module belongs in `shared` behind a named interface, never duplicated or reached into across module boundaries (`internal.*` packages are private to their own module — the `ModularityTest` enforces this).
 
 **Error Hierarchy (by Domain)**

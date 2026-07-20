@@ -38,6 +38,16 @@ public class TestcontainersConfiguration {
     return new PostgreSQLContainer(DockerImageName.parse("postgres:18.4"));
   }
 
+  // Não existe módulo Testcontainers não-genérico pra Redis (mesma situação do Keycloak
+  // abaixo) — @ServiceConnection(name="redis") já é reconhecido pelo Spring Boot pra
+  // GenericContainer, sem precisar de DynamicPropertyRegistrar (phantom-token, ADR-004).
+  @Bean
+  @ServiceConnection(name = "redis")
+  GenericContainer<?> redisContainer() {
+    return new GenericContainer<>(DockerImageName.parse("redis:8.8.0"))
+      .withExposedPorts(6379);
+  }
+
   // Keycloak com o MESMO realm JSON do compose (SDD qualidade-e-testes §3 — um realm só,
   // dev e teste idênticos). start-dev aqui é aceitável: o modo de storage difere, o realm não.
   @Bean

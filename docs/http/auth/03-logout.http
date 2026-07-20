@@ -1,0 +1,15 @@
+### RF35 (ADR-004) — Revogação do token opaco
+### POST /api/v1/auth/logout — apaga a entrada do Redis; o token deixa de autenticar
+### imediatamente, independente do exp do JWT real subjacente no Keycloak. Rode
+### docs/http/auth/01-login.http primeiro e cole o token abaixo.
+
+@baseUrl = http://localhost:8090
+@token = COLE_AQUI_O_TOKEN_DO_LOGIN
+
+### Logout — 204 No Content (idempotente: chamar de novo com o mesmo token também dá 204)
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{token}}
+
+### Confirmar revogação — chamada autenticada com o mesmo token agora deve dar 401
+POST {{baseUrl}}/api/v1/documents
+Authorization: Bearer {{token}}

@@ -29,22 +29,29 @@ public final class CallerContextJwtConverter implements Converter<Jwt, AbstractA
 
   @Override
   public AbstractAuthenticationToken convert(final Jwt jwt) {
+    final var context = toCallerContext(jwt);
+    final var authorities = context.roles().stream()
+      .map(SimpleGrantedAuthority::new)
+      .collect(Collectors.toUnmodifiableSet());
+    return new CallerContextAuthenticationToken(jwt, context, authorities);
+  }
+
+  /**
+   * Extração de claims reaproveitada pelo login por phantom token (ADR-004): o access
+   * token recém-emitido pelo Keycloak passa pelas mesmas regras (tenantId obrigatória,
+   * roles de realm) antes de virar {@link CallerContext} cacheado no Redis.
+   */
+  public static CallerContext toCallerContext(final Jwt jwt) {
     final var tenantId = jwt.getClaimAsString(CLAIM_TENANT_ID);
     if (tenantId == null || tenantId.isBlank()) {
       log.warn("Token rejeitado: claim '{}' ausente para sub='{}' — identidade sem tenant não existe (ADL-008)",
         CLAIM_TENANT_ID, jwt.getSubject());
       throw new InvalidBearerTokenException("Token sem a claim obrigatória 'tenantId'");
     }
-
-    final var roles = realmRoles(jwt);
-    final var context = new CallerContext(tenantId, jwt.getSubject(), roles);
-    final var authorities = roles.stream()
-      .map(SimpleGrantedAuthority::new)
-      .collect(Collectors.toUnmodifiableSet());
-    return new CallerContextAuthenticationToken(jwt, context, authorities);
+    return new CallerContext(tenantId, jwt.getSubject(), realmRoles(jwt));
   }
 
-  private Set<String> realmRoles(final Jwt jwt) {
+  private static Set<String> realmRoles(final Jwt jwt) {
     final Map<String, Object> realmAccess = jwt.getClaimAsMap(CLAIM_REALM_ACCESS);
     if (realmAccess == null || !(realmAccess.get(CLAIM_ROLES) instanceof List<?> raw)) {
       return Set.of();

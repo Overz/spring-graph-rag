@@ -17,6 +17,13 @@ spring:
         jwt:
           # Realm graphrag do Keycloak local (ADL-008) — validação por JWKS
           issuer-uri: "${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/graphrag}"
+  data:
+    redis:
+      host: "${REDIS_HOST:localhost}"
+      port: "${REDIS_PORT:6379}"
+      # db 1 já é usado pelo JuiceFS (ver compose.yaml, serviço juicefs-format) — o
+      # phantom-token store (ADR-004) usa um database lógico diferente na mesma instância.
+      database: 2
   servlet:
     multipart:
       # Um pouco acima do limite de negócio de 5MB (RF03) para que a validação de
@@ -82,3 +89,8 @@ app:
       xml: application/xml,text/xml
       txt: text/plain
       md: text/markdown,text/x-web-markdown,text/plain
+  auth:
+    # Login por phantom token (RF35, ADR-004): client fixo do realm graphrag, mesmo client
+    # que graphrag-api já usa nos fluxos de teste (KeycloakTokens) — grant_type é fixo no
+    # código (password no login, refresh_token no refresh), não vem de configuração.
+    keycloak-client-id: graphrag-api
