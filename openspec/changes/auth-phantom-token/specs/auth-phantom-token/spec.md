@@ -16,6 +16,20 @@ O sistema SHALL expor um endpoint de login que autentica um usuário final contr
 - **WHEN** um usuário faz login com usuário ou senha incorretos
 - **THEN** a resposta é `401 Unauthorized` e nenhum token opaco é emitido
 
+### Requirement: Renovação de sessão sem novo login
+
+O sistema SHALL expor um endpoint de refresh que, dado um token opaco válido, troca o `refresh_token` do Keycloak associado (cacheado no Redis) por um novo `access_token`/`refresh_token` via `grant_type=refresh_token` fixo, e SHALL atualizar a mesma entrada no Redis — o token opaco entregue ao cliente no login original NÃO SHALL mudar.
+
+#### Scenario: Refresh de sessão válida mantém o mesmo token opaco
+
+- **WHEN** um usuário autenticado chama o endpoint de refresh antes da sua sessão expirar
+- **THEN** a API renova o `access_token`/`refresh_token` reais junto ao Keycloak e o cliente continua usando o mesmo token opaco de antes
+
+#### Scenario: Refresh com token opaco inexistente ou expirado é rejeitado
+
+- **WHEN** o endpoint de refresh é chamado com um token opaco que não existe (ou cuja sessão já expirou) no Redis
+- **THEN** a resposta é `401 Unauthorized`
+
 ### Requirement: Revogação de phantom token no logout
 
 O sistema SHALL expor um endpoint de logout que revoga um token opaco válido, removendo sua entrada do Redis. Após a revogação, esse token opaco não SHALL mais autenticar nenhuma requisição, independentemente do `exp` do JWT real subjacente no Keycloak.

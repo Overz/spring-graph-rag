@@ -28,7 +28,7 @@
 - Um conversor único materializa o `CallerContext {tenantId, ownerId, roles}` das claims — token **sem claim `tenantId` é rejeitado** (401): identidade sem tenant não existe neste sistema.
 - Controllers e tools só enxergam `CallerContext`; nenhum código de domínio lê JWT cru.
 
-> **Proposto, ainda não implementado:** `openspec/changes/auth-phantom-token` endurece o login de usuário final com o padrão **Phantom Token** (Redis) — a API emite um token opaco em vez do JWT cru, resolvido internamente a cada requisição; JWT direto continua valendo para os service accounts MCP (client_credentials), inalterado. Vive como pacote `api/internal/auth/` (sem módulo Spring Modulith novo — `mcp` nunca faz login via password grant). Schema Redis e resolução dual de token registrados no `design.md` do change; path dos endpoints e escopo do logout ainda em aberto.
+> **Proposto, ainda não implementado:** `openspec/changes/auth-phantom-token` (decisões formalizadas em `docs/adr/ADR-004-phantom-token-login.md`) endurece o login de usuário final com o padrão **Phantom Token** (Redis) — `POST /api/v1/auth/login|refresh|logout` emitem/renovam/revogam um token opaco em vez do JWT cru; JWT direto continua valendo para os service accounts MCP (client_credentials), inalterado. Vive como pacote `api/internal/auth/` (sem módulo Spring Modulith novo — `mcp` nunca faz login via password grant).
 
 ## 2. Isolamento multitenant — AuthZ (RF30)
 
