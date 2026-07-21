@@ -1,0 +1,24 @@
+### RF10 (complemento) — Substituição de versão
+### POST /api/v1/documents/{id}/versions — multipart, mesma cadeia de validação do upload
+### original (RF01-07). A versão anterior segue o fluxo de exclusão lógica; a nova é
+### registrada como version+1, reiniciando o ciclo em UPLOADED (202).
+### Token: rode docs/http/keycloak/01-obter-token.http e cole o access_token abaixo.
+### {{documentId}}: cole o "id" do documento que está sendo substituído (dono deve bater
+### com o token acima — ver docs/http/ciclo-de-vida/02-exclusao-logica.http pras regras
+### de permissão, idênticas aqui).
+
+@baseUrl = http://localhost:8090
+@token = COLE_AQUI_O_ACCESS_TOKEN
+@documentId = COLE_AQUI_O_ID_DO_DOCUMENTO
+
+### Nova versão aceita (202) — troque o caminho abaixo por um arquivo local válido
+POST {{baseUrl}}/api/v1/documents/{{documentId}}/versions
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="documento-v2.pdf"
+Content-Type: application/pdf
+
+< ./caminho/para/seu-arquivo.pdf
+--WebAppBoundary--

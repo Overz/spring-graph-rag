@@ -38,21 +38,21 @@ public class DocumentLifecycleController {
   private final DocumentCommandApi documents;
   private final DocumentUploadService documentUploadService;
 
-  @GetMapping("/api/v1/documents/{id}/status")
+  @GetMapping(path = { "/api/v1/documents/{id}/status" })
   DocumentStatusResponse status(@PathVariable final UUID id, final CallerContext caller) {
     final var status = documents.statusOf(id, caller.tenantId(), caller.ownerId())
       .orElseThrow(DocumentNotFoundException::new);
     return DocumentLifecycleResponseMapper.toResponse(status);
   }
 
-  @GetMapping("/api/v1/documents/{id}/history")
+  @GetMapping(path = { "/api/v1/documents/{id}/history" })
   List<DocumentHistoryEntryResponse> history(@PathVariable final UUID id, final CallerContext caller) {
     final var entries = documents.historyOf(id, caller.tenantId(), caller.ownerId())
       .orElseThrow(DocumentNotFoundException::new);
     return DocumentLifecycleResponseMapper.toResponse(entries);
   }
 
-  @DeleteMapping("/api/v1/documents/{id}")
+  @DeleteMapping(path = { "/api/v1/documents/{id}" })
   @ResponseStatus(HttpStatus.NO_CONTENT)
   void delete(@PathVariable final UUID id, final CallerContext caller) {
     requireGranted(documents.deleteDocument(id, caller.tenantId(), caller.ownerId()));
@@ -77,7 +77,9 @@ public class DocumentLifecycleController {
     switch (outcome) {
       case NOT_FOUND -> throw new DocumentNotFoundException();
       case FORBIDDEN -> throw new DocumentAccessDeniedException();
-      case OK -> { }
+      case OK -> {
+        // ignored
+      }
     }
   }
 

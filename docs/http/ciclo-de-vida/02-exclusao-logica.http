@@ -1,0 +1,23 @@
+### RF10/RF30 — Exclusão lógica (soft delete) com isolamento de grafo
+### DELETE /api/v1/documents/{id} — síncrono (design.md D2, change epico-2-ciclo-de-vida):
+### marca is_active=false no Postgres, no nó Document/Chunks (Neo4j) e inativa os vetores
+### correspondentes (OpenSearch). Restrito ao dono do documento.
+### Token: rode docs/http/keycloak/01-obter-token.http e cole o access_token abaixo.
+### {{documentId}}: cole o "id" devolvido por docs/http/ingestao/01-upload-documento.http.
+
+@baseUrl = http://localhost:8090
+@token = COLE_AQUI_O_ACCESS_TOKEN
+@documentId = COLE_AQUI_O_ID_DO_DOCUMENTO
+
+### Exclusão pelo próprio dono — 204 sem corpo
+DELETE {{baseUrl}}/api/v1/documents/{{documentId}}
+Authorization: Bearer {{token}}
+
+### Exclusão por outro usuário do mesmo tenant — espera 403 (DOCUMENT_ACCESS_DENIED)
+### Troque @token acima por um token de outro usuário seedado (ex.: bob/bob) antes de rodar.
+DELETE {{baseUrl}}/api/v1/documents/{{documentId}}
+Authorization: Bearer {{token}}
+
+### Documento inexistente (ou de outro tenant) — espera 404 (DOCUMENT_NOT_FOUND)
+DELETE {{baseUrl}}/api/v1/documents/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}

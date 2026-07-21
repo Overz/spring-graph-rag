@@ -1,0 +1,21 @@
+### RF09 — Consulta de status atual e histórico de um documento
+### GET /api/v1/documents/{id}/status | /history — qualquer usuário autenticado, restrito
+### ao próprio documento (SecurityConfig: anyRequest().authenticated()).
+### Token: rode docs/http/keycloak/01-obter-token.http e cole o access_token abaixo.
+### {{documentId}}: cole o "id" devolvido por docs/http/ingestao/01-upload-documento.http.
+
+@baseUrl = http://localhost:8090
+@token = COLE_AQUI_O_ACCESS_TOKEN
+@documentId = COLE_AQUI_O_ID_DO_DOCUMENTO
+
+### Status atual (200) — corpo { "status": "..." }
+GET {{baseUrl}}/api/v1/documents/{{documentId}}/status
+Authorization: Bearer {{token}}
+
+### Histórico completo (200) — lista ordenada cronologicamente, cada item com status/occurredAt/detail
+GET {{baseUrl}}/api/v1/documents/{{documentId}}/history
+Authorization: Bearer {{token}}
+
+### Documento inexistente (ou de outro tenant/dono) — espera 404 "Documento não encontrado"
+GET {{baseUrl}}/api/v1/documents/00000000-0000-0000-0000-000000000000/status
+Authorization: Bearer {{token}}
