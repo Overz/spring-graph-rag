@@ -1,11 +1,11 @@
-Mapeia RF08–RF11 / `docs/rag-plan.md` Épico 2 ([2.1]–[2.5]). **Antes de iniciar a implementação**, confirmar as Open Questions do `design.md` com o usuário (endpoints, nome da porta de índice vetorial, granularidade das capabilities, e principalmente D2 — soft-delete síncrono).
+Mapeia RF08–RF11 / `docs/rag-plan.md` Épico 2 ([2.1]–[2.5]). Todas as decisões de arquitetura foram confirmadas com o usuário em 2026-07-20 — ver `design.md` §Open Questions (todas resolvidas).
 
-## 1. Decisões de arquitetura a confirmar antes de codar
+## 1. Decisões de arquitetura (todas resolvidas)
 
-- [ ] 1.1 Confirmar D2 (soft-delete síncrono, não event-driven) — decisão de maior impacto deste change
-- [ ] 1.2 Confirmar paths/verbos dos endpoints novos (design.md Open Question 1)
-- [ ] 1.3 Confirmar nome da porta de índice vetorial (design.md Open Question 2 — `VectorIndex`/`OpenSearchVectorIndex` ou outro)
-- [ ] 1.4 Confirmar granularidade das 3 capabilities propostas (Open Question 3)
+- [x] 1.1 D2 — soft-delete síncrono agora, documentado como débito pro Épico 3
+- [x] 1.2 Endpoints: `GET /{id}/status`, `GET /{id}/history`, `DELETE /{id}`, `POST /{id}/versions`
+- [x] 1.3 `ChunkIndex`/`OpenSearchChunkIndex` — nomeado pelo domínio (Chunk), não pela tecnologia (Vector)
+- [x] 1.4 3 capabilities separadas, granularidade máxima (preferência do usuário)
 
 ## 2. Schema Neo4j e OpenSearch (estrutura, não população)
 
@@ -13,26 +13,28 @@ Mapeia RF08–RF11 / `docs/rag-plan.md` Épico 2 ([2.1]–[2.5]). **Antes de ini
 - [ ] 2.2 Índice OpenSearch mínimo de chunk (`chunkId`, `documentId`, `ownerId`, `tenantId`, `isActive` como `keyword`; `content` como `text` — `dados.md` §3), criado de forma idempotente (checar existência antes de criar)
 - [ ] 2.3 `TestcontainersConfiguration`: confirmar que Neo4j/OpenSearch já testcontainerizados (Épico 0) cobrem os testes deste change sem ajuste adicional
 
-## 3. Modelo e repositórios
+## 3. Modelo e repositórios (nomeados pelo domínio, método = ação exata — design.md D4)
 
-- [ ] 3.1 Repositórios Neo4j em `rag/internal/repositories/` para `Document`/`Chunk`/`Entity` (leitura/escrita mínima: marcar `isActive`, consultar órfãos, criar fixture de teste)
-- [ ] 3.2 Porta + adapter do índice vetorial (nome confirmado em 1.3) em `rag/internal/repositories/` — método mínimo: inativar vetores por `chunkId`/`documentId`
-- [ ] 3.3 `DocumentLifecycleService` (`rag/internal/services/`): único ponto de escrita de `DocumentStatus`; deriva status agregado de `embeddingStatus`/`graphStatus`; grava `document_status_history` em cada transição
+- [ ] 3.1 `DocumentGraphRepository` (Neo4j, `rag/internal/repositories/`): `markInactive(String documentId)` — marca `Document`+`Chunk`s como `isActive=false` (RF10)
+- [ ] 3.2 `EntityGraphRepository` (Neo4j, `rag/internal/repositories/`): `findOrphanEntities()` + `deleteEntities(List<String> entityIds)` (RF11)
+- [ ] 3.3 `ChunkIndex` (interface) + `OpenSearchChunkIndex` (adapter), `rag/internal/repositories/`: `inactivateByDocumentId(String documentId)` (RF10) — só este método agora, ações futuras (indexar/buscar) entram nos Épicos 5/7
+- [ ] 3.4 `DocumentLifecycleService` (`rag/internal/services/`): único ponto de escrita de `DocumentStatus`; deriva status agregado de `embeddingStatus`/`graphStatus`; grava `document_status_history` em cada transição
+- [ ] 3.5 Helper só-de-teste (mirror do `SyntheticFiles`) para os steps `Dado` fixturarem nó Neo4j/vetor OpenSearch diretamente — não entra nas portas de produção acima
 
 ## 4. `DocumentCommandApi` e comandos
 
 - [ ] 4.1 Consulta de status atual + histórico completo (RF09) — método(s) novos na porta pública, documento de outro tenant/dono responde vazio (mapeado pra 404 limpo em `api`)
-- [ ] 4.2 Comando de exclusão lógica (RF10): valida dono (RF30), marca `is_active=false` no Postgres, chama os repositórios Neo4j/OpenSearch (síncrono, D2), registra erro em `processing_errors` se algum store falhar
+- [ ] 4.2 Comando de exclusão lógica (RF10): valida dono (RF30), marca `is_active=false` no Postgres, chama `DocumentGraphRepository.markInactive` + `ChunkIndex.inactivateByDocumentId` (síncrono, D2), registra erro em `processing_errors` se algum store falhar
 - [ ] 4.3 Comando de substituição de versão (RF10 complemento): exclusão lógica da versão anterior + registro da nova versão (`version+1`) reiniciando em `UPLOADED`
 
 ## 5. Endpoints REST (`api`)
 
-- [ ] 5.1 `DocumentLifecycleController` novo (separado do `DocumentUploadController`) com os 4 endpoints confirmados em 1.2
+- [ ] 5.1 `DocumentLifecycleController` novo (separado do `DocumentUploadController`): `GET /api/v1/documents/{id}/status`, `GET /api/v1/documents/{id}/history`, `DELETE /api/v1/documents/{id}`, `POST /api/v1/documents/{id}/versions`
 - [ ] 5.2 Autorização: rota de exclusão exige dono (RF30); demais rotas de consulta seguem o padrão de `CallerContext` já estabelecido
 
 ## 6. Garbage Collection (RF11)
 
-- [ ] 6.1 Query Cypher de entidades órfãs (sem aresta `MENTIONS` para `Chunk` `isActive=true`) e remoção física (nó + relacionamentos)
+- [ ] 6.1 Query Cypher de entidades órfãs (sem aresta `MENTIONS` para `Chunk` `isActive=true`) via `EntityGraphRepository.findOrphanEntities()`, remoção física via `deleteEntities(...)`
 - [ ] 6.2 Job agendado (`@Scheduled`, intervalo configurável em `application.yaml` — `app.gc.*`)
 
 ## 7. BDD — fechar as features de ciclo de vida

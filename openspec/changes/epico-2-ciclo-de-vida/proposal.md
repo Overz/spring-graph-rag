@@ -7,7 +7,7 @@ O upload (Épico 1) só cobre `RECEIVED → VALIDATING → UPLOADED`; o resto do
 - `DocumentLifecycleService` (novo, módulo `rag`): único ponto de escrita de `DocumentStatus`, deriva o status agregado a partir dos sub-estados `embeddingStatus`/`graphStatus` (RF08). Testável hoje via simulação direta de transição — não há pipeline real (Épicos 3–6) disparando as etapas ainda.
 - `DocumentCommandApi` ganha consulta de status atual + histórico completo (RF09) e comando de exclusão lógica/nova versão (RF10) — únicos métodos novos na porta pública que `api` consome.
 - Schema Neo4j (`Document`/`Chunk`/`Entity`, constraints/índices de `docs/sdd/dados.md` §4) e um índice OpenSearch mínimo de chunk (§3) criados neste change — **estrutura**, não população: nenhuma extração de entidade (Épico 6) ou geração de embedding (Épico 5) acontece aqui. Cenários de RF10/RF11 usam fixture direta nos steps `Dado` para simular que o dado já existe.
-- Novos endpoints REST em `api`: consulta de status, consulta de histórico, exclusão lógica, substituição de versão (paths exatos — ver Open Questions do `design.md`).
+- Novos endpoints REST em `api`: `GET /{id}/status`, `GET /{id}/history`, `DELETE /{id}` (exclusão lógica), `POST /{id}/versions` (substituição de versão).
 - Job de garbage collection (RF11) que varre o Neo4j por entidades/relacionamentos sem chunk ativo conectado e remove fisicamente.
 - **BREAKING**: nenhum — tudo aditivo sobre o que existe.
 
@@ -23,7 +23,7 @@ O upload (Épico 1) só cobre `RECEIVED → VALIDATING → UPLOADED`; o resto do
 
 ## Impact
 
-- **Código:** novo `DocumentLifecycleService`, extensão de `DocumentCommandApi`/`RegisteredDocument` (ou record novo), repositórios Neo4j (`rag/internal/repositories`), porta + adapter mínimo de índice vetorial (nome a definir — ver design.md), 4 endpoints REST novos em `api/internal/controllers`, job de GC agendado.
+- **Código:** novo `DocumentLifecycleService`, extensão de `DocumentCommandApi`/`RegisteredDocument` (ou record novo), `DocumentGraphRepository`/`EntityGraphRepository` (Neo4j) e `ChunkIndex`/`OpenSearchChunkIndex` (OpenSearch) em `rag/internal/repositories`, 4 endpoints REST novos em `api/internal/controllers`, job de GC agendado.
 - **Infra:** nenhuma mudança em `compose.yaml` — Neo4j e OpenSearch já existem no compose desde o Épico 0, só ficam com uso real por trás pela primeira vez.
 - **Schema:** constraints/índices Neo4j (idempotentes, `IF NOT EXISTS`) e mapping de índice OpenSearch — mecanismo de criação a decidir (ver design.md Open Questions). Nenhuma migração Postgres nova — schema já 100% pronto desde `V1__baseline_documents.sql`.
 - **Docs:** `docs/sdd/dados.md` (nota do `SoftDeleteRequestedEvent` como débito até o Épico 3), `docs/rag-plan.md` [2.1]–[2.5], `CLAUDE.md`.

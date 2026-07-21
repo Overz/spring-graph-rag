@@ -33,7 +33,7 @@ Cenários de RF08 ("progressão completa", "sub-estados independentes", falhas p
 
 *Consequência:* quando os Épicos 5/6 chegarem, eles só escrevem no schema que já existe — nenhum redesenho, só troca do produtor do dado (de fixture de teste para extração/embedding real).
 
-### D2 — Soft-delete síncrono agora, não event-driven
+### D2 — Soft-delete síncrono agora, não event-driven — CONFIRMADO com o usuário
 
 `dados.md` §5 especifica `SoftDeleteRequestedEvent` → 3 listeners (Postgres/Neo4j/OpenSearch) como o mecanismo de exclusão. Isso pressupõe a infra de eventos do Épico 3, que não existe. Este change implementa o comando de exclusão como uma chamada síncrona que atualiza os 3 stores diretamente (mesma transação lógica no `DocumentLifecycleService`) — mesmo padrão do ClamAV mock no Épico 1: débito registrado, adaptador troca depois sem redesenho de contrato.
 
@@ -47,12 +47,16 @@ Não há Flyway para Neo4j neste projeto. As constraints/índices de `dados.md` 
 
 *Alternativa considerada:* uma ferramenta de migração dedicada pra Neo4j (ex. Liquigraph). Rejeitada por agora — YAGNI; o conjunto de constraints é pequeno e estável, um runner idempotente resolve sem dependência nova. Revisitar se o esquema crescer muito nos Épicos 6+.
 
-### D4 — Pacote/porta do código novo
+### D4 — Pacote/porta do código novo — CONFIRMADO com o usuário
 
-- Repositórios Neo4j em `rag/internal/repositories/` (mesmo pacote dos repositórios JPA existentes — `DocumentRepository`, etc. — o projeto já usa esse pacote pra "acesso a dado", independente da tecnologia).
-- Porta do índice vetorial nomeada por papel, mesmo padrão de `DocumentStorage`/`MalwareScanner`: `VectorIndex` (interface) + `OpenSearchVectorIndex` (adapter), em `rag/internal/repositories/` também (é uma porta de acesso a dado, não um serviço de negócio).
+Nomenclatura decidida pelo domínio, não pela tecnologia — cada porta nomeada pela entidade que manipula, cada método pela ação exata que executa (não CRUD genérico):
+
+- **`ChunkIndex`** (interface, `rag/internal/repositories/`) + **`OpenSearchChunkIndex`** (adapter): `Chunk` é o domínio (é o que o RAG indexa/busca — "índice" já é o termo que o próprio `dados.md` usa pra essa peça), não "Vector" (detalhe de tecnologia). Método deste change: `inactivateByDocumentId(String documentId)` — inativa todos os chunks de um documento, que é exatamente a ação do RF10 (não um chunk isolado). Futuras ações (indexar, buscar — Épicos 5/7) entram como métodos novos na mesma interface quando esses épicos chegarem; não antecipar agora (YAGNI).
+- **`DocumentGraphRepository`** (`rag/internal/repositories/`): `markInactive(String documentId)` — marca `Document` + seus `Chunk`s como `isActive=false` no Neo4j (RF10).
+- **`EntityGraphRepository`** (`rag/internal/repositories/`): `findOrphanEntities()` (consulta) + `deleteEntities(List<String> entityIds)` (hard delete físico) — dois métodos separados porque o job de GC orquestra em duas etapas distintas (identificar, depois remover), espelhando o próprio Gherkin ("deve identificar... e deve deletar fisicamente").
+- Fixtures de teste (steps `Dado` do BDD que simulam nó/vetor já existente) **NÃO** entram nessas portas de produção — vivem num helper só-de-teste (mesmo padrão do `SyntheticFiles` do Épico 1), evitando poluir a porta real com método "criar pra teste".
 - `DocumentLifecycleService` em `rag/internal/services/` (mesmo pacote de `DocumentIngestService`).
-- Novos endpoints em `api/internal/controllers/` — provavelmente um `DocumentLifecycleController` novo, separado de `DocumentUploadController` (responsabilidades distintas: aceitar upload vs. consultar/gerenciar ciclo de vida).
+- Novos endpoints em `api/internal/controllers/`: `DocumentLifecycleController` novo, separado de `DocumentUploadController`.
 
 ## Risks / Trade-offs
 
@@ -66,7 +70,9 @@ Aditivo. Nenhuma rota/contrato existente muda. Rollback = remover o `DocumentLif
 
 ## Open Questions
 
-1. **Paths/verbos dos endpoints novos** — proposta (confirmar): `GET /api/v1/documents/{id}/status` (status atual), `GET /api/v1/documents/{id}/history` (histórico completo), `DELETE /api/v1/documents/{id}` (exclusão lógica, RF10), `PUT /api/v1/documents/{id}` (multipart, substituição de versão — mesmo contrato de upload, mas em cima de um id existente). Alternativa a `PUT`: um verbo/path dedicado como `POST /api/v1/documents/{id}/versions`.
-2. **Nome definitivo da porta de índice vetorial** — `VectorIndex`/`OpenSearchVectorIndex` (D4) ou outro nome preferido.
-3. **Granularidade das capabilities no catálogo** — proposta: 3 capabilities (`ciclo-de-vida-documento`, `exclusao-e-versionamento`, `garbage-collection-grafo`). Podem ser agrupadas diferente se fizer mais sentido pro usuário.
-4. **Confirmar D2 (soft-delete síncrono, não event-driven)** antes de implementar — é a decisão de maior impacto arquitetural deste change.
+Todas resolvidas com o usuário em 2026-07-20:
+
+1. ~~Paths/verbos dos endpoints novos~~ — **resolvido**: `GET /api/v1/documents/{id}/status`, `GET /api/v1/documents/{id}/history`, `DELETE /api/v1/documents/{id}` (RF10), `POST /api/v1/documents/{id}/versions` (nova versão — sub-recurso explícito, não `PUT`).
+2. ~~Nome da porta de índice vetorial~~ — **resolvido**: `ChunkIndex`/`OpenSearchChunkIndex` (D4), nomeado pelo domínio (`Chunk`), não pela tecnologia (`Vector`).
+3. ~~Granularidade das capabilities~~ — **resolvido**: mantém as 3 capabilities separadas (`ciclo-de-vida-documento`, `exclusao-e-versionamento`, `garbage-collection-grafo`) — usuário prefere o mais granular possível por organização/manutenção.
+4. ~~D2 (soft-delete síncrono)~~ — **resolvido**: síncrono agora, documentado como débito pro Épico 3 (ver D2 acima).
