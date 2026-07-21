@@ -1,5 +1,4 @@
 # language: pt
-@pendente
 Funcionalidade: Exclusão lógica e substituição de versão
   Cobre RF10 (Soft Delete com isolamento de grafo e semântica de substituição
   de versão).

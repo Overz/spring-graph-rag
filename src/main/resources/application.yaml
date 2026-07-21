@@ -97,3 +97,7 @@ app:
     # código (password no login, refresh_token no refresh), não vem de configuração.
     identity-provider-auth-uri: "${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/token"
     identity-provider-client-id: "graphrag-api"
+  gc:
+    # Garbage collection de entidades órfãs (RF11) — os steps BDD chamam o job direto,
+    # sem esperar este agendamento; produção roda a cada hora.
+    interval-ms: 3600000

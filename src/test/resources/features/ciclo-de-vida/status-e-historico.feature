@@ -1,5 +1,4 @@
 # language: pt
-@pendente
 Funcionalidade: Ciclo de vida de processamento e histórico por documento
   Cobre RF08 (status obrigatórios do ciclo de vida e fork-join de
   EMBEDDING/GRAPH_BUILDING) e RF09 (consulta de status e histórico completo).
@@ -63,4 +62,4 @@ Funcionalidade: Ciclo de vida de processamento e histórico por documento
   @RF09
   Cenário: Consulta de status de documento inexistente
     Quando o usuário consultar o status do documento "00000000-0000-0000-0000-000000000000"
-    Então a requisição deve ser rejeitada com um erro de "Documento não encontrado"
+    Então a consulta deve ser rejeitada com um erro de "Documento não encontrado"
