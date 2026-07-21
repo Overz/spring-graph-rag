@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.opensearch.testcontainers.OpensearchContainer;
 import org.testcontainers.grafana.LgtmStackContainer;
 import org.testcontainers.neo4j.Neo4jContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -71,6 +72,22 @@ public class TestcontainersConfiguration {
       "spring.security.oauth2.resourceserver.jwt.issuer-uri",
       () -> "http://%s:%d/realms/graphrag"
         .formatted(keycloakContainer.getHost(), keycloakContainer.getMappedPort(KEYCLOAK_PORT)));
+  }
+
+  // Épico 2 (ciclo de vida): schema mínimo de chunk (ChunkIndex). Sem @ServiceConnection
+  // pronto pra `spring.ai.vectorstore.opensearch.uris` (não é um tipo de conexão coberto
+  // pelo Spring Boot) — mesma estratégia do Keycloak, propriedade dinâmica.
+  @Bean
+  OpensearchContainer<?> opensearchContainer() {
+    return new OpensearchContainer<>(DockerImageName.parse("opensearchproject/opensearch:3.7.0"));
+  }
+
+  @Bean
+  DynamicPropertyRegistrar opensearchProperties(final OpensearchContainer<?> opensearchContainer) {
+    return registry -> registry.add(
+      "spring.ai.vectorstore.opensearch.uris",
+      // getHttpHostAddress() já devolve o esquema (http://host:port) — não prefixar de novo.
+      opensearchContainer::getHttpHostAddress);
   }
 
 }

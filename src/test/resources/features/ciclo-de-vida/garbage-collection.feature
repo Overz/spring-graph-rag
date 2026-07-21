@@ -1,5 +1,4 @@
 # language: pt
-@pendente
 Funcionalidade: Expurgamento de entidades órfãs do grafo
   Cobre RF11 (Garbage Collection periódico de nós e relacionamentos sem
   conexão com chunks ativos).

@@ -220,6 +220,13 @@ Records imutáveis em `shared`. **Envelope comum a todos:** `documentId`, `tenan
 | `StageFailedEvent` | qualquer etapa | registrador de erros + agendador de retry | `stage`, `errorCode`, `attempt`, `transient` |
 | `SoftDeleteRequestedEvent` | `rag` (comando da API) | executores por base (relacional/vetorial/grafo) | — |
 
+> **Débito conhecido (Épico 2, `openspec/changes/archive/epico-2-ciclo-de-vida`):** `SoftDeleteRequestedEvent`
+> é desenho — a exclusão lógica (RF10) hoje é uma chamada síncrona em `DocumentLifecycleService`
+> que atualiza Postgres/Neo4j/OpenSearch direto, sem publicar este evento (a infra de eventos
+> internos do Épico 3 ainda não existe). Falha em Neo4j/OpenSearch durante a chamada síncrona
+> vira linha em `processing_errors`, não retry automático — mitigação até a reconciliação do
+> Épico 8 (RF38) existir. Migrar para o evento real é troca de mecanismo, não de contrato.
+
 Regras:
 
 - Publicação **na mesma transação** da mudança de estado (registry garante entrega at-least-once pós-commit).

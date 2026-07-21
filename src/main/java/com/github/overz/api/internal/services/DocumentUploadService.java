@@ -6,6 +6,7 @@ import com.github.overz.api.internal.validations.UploadValidator;
 import com.github.overz.rag.AcceptedUpload;
 import com.github.overz.rag.DocumentCommandApi;
 import com.github.overz.rag.RegisteredDocument;
+import com.github.overz.rag.VersionReplacementResult;
 import com.github.overz.shared.errors.ApplicationException;
 import com.github.overz.shared.logging.ILogger;
 import com.github.overz.shared.logging.LoggerFactory;
@@ -43,6 +44,22 @@ public class DocumentUploadService {
   private final DocumentCommandApi documents;
 
   public RegisteredDocument accept(final MultipartFile file, final CallerContext caller) {
+    return documents.registerAcceptedUpload(validateAndStore(file, caller));
+  }
+
+  /**
+   * Substituição de versão (RF10 complemento): mesma cadeia de validação/storage do
+   * aceite original — inclusive {@code DuplicateFileValidator}/{@code QuotaValidator},
+   * que continuam corretos aqui (RF07 é por hash de tenant+owner, não por documento
+   * específico) — só o comando final ao {@code rag} muda.
+   */
+  public VersionReplacementResult acceptReplacement(
+    final UUID previousDocumentId, final MultipartFile file, final CallerContext caller
+  ) {
+    return documents.replaceVersion(previousDocumentId, validateAndStore(file, caller));
+  }
+
+  private AcceptedUpload validateAndStore(final MultipartFile file, final CallerContext caller) {
     // Gerado no ato do upload (RF28 complemento) — acompanha o documento pipeline afora.
     final var correlationId = UUID.randomUUID().toString();
     final var candidate = spool(file, caller);
@@ -59,7 +76,7 @@ public class DocumentUploadService {
         throw new ApplicationException("Falha lendo o conteúdo temporário do upload", e);
       }
 
-      return documents.registerAcceptedUpload(new AcceptedUpload(
+      return new AcceptedUpload(
         documentId,
         caller.tenantId(),
         caller.ownerId(),
@@ -70,7 +87,7 @@ public class DocumentUploadService {
         candidate.sha256(),
         rawStorageKey,
         correlationId
-      ));
+      );
     } finally {
       deleteQuietly(candidate.content());
     }
