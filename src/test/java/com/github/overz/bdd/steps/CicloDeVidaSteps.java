@@ -183,6 +183,16 @@ public class CicloDeVidaSteps {
     assertThat(response.getStatusCode().value()).as("exclusão aceita; corpo=%s", response.getBody()).isEqualTo(204);
     assertThat(neoIsActive("Document", docIds.get(documento))).as("Document.isActive").isFalse();
     assertThat(neoIsActive("Chunk", chunkIds.get(documento))).as("Chunk.isActive").isFalse();
+
+    final var linhaDeAuditoria = jdbc.queryForObject(
+      "SELECT count(*) FROM document_status_history WHERE document_id = ? AND detail = ?",
+      Long.class, UUID.fromString(docIds.get(documento)), "Documento excluído logicamente");
+    assertThat(linhaDeAuditoria).as("histórico registra a exclusão lógica").isGreaterThan(0);
+
+    final var statusAposExclusao = getStatus(docIds.get(documento), "dev_user");
+    assertThat(statusAposExclusao.getStatusCode().value())
+      .as("documento excluído não deve mais responder por GET /status")
+      .isEqualTo(404);
   }
 
   @Entao("deve inativar os vetores correspondentes no OpenSearch")

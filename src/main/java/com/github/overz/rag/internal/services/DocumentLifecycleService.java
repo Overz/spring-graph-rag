@@ -173,6 +173,16 @@ public class DocumentLifecycleService implements DocumentCommandApi {
     document.setActive(false);
     documents.save(document);
 
+    // Rastro de auditoria da exclusão (RF31): DocumentStatus não tem estado "excluído" —
+    // não é etapa de pipeline, é uma flag ortogonal (isActive) — então a transição não
+    // muda de status (from == to, o que já tinha), só o detail explica o evento. Fica no
+    // histórico para quando o audit_log dedicado (RF31, Épico futuro) existir; até lá,
+    // não é mais consultável por GET /history assim que isActive vira false (ver
+    // findVisibleTo) — a linha permanece no Postgres, só não é servida por este endpoint.
+    history.save(DocumentStatusHistoryEntity.transition(
+      document.getId(), document.getStatus(), document.getStatus(), OffsetDateTime.now(),
+      "Documento excluído logicamente"));
+
     final var documentId = document.getId().toString();
     try {
       documentGraph.markInactive(documentId);
@@ -197,14 +207,25 @@ public class DocumentLifecycleService implements DocumentCommandApi {
       document.getCorrelationId(), OffsetDateTime.now()));
   }
 
+  /**
+   * {@code isActive} estrutural em todo read filter (CLAUDE.md, multitenancy): documento
+   * excluído logicamente responde igual a inexistente — não é mais visível por aqui.
+   */
   private Optional<DocumentEntity> findVisibleTo(final UUID documentId, final String tenantId, final String ownerId) {
     return documents.findById(documentId)
+      .filter(DocumentEntity::isActive)
       .filter(document -> document.getTenantId().equals(tenantId))
       .filter(document -> document.getOwnerId().equals(ownerId));
   }
 
+  /**
+   * Mesma regra de {@link #findVisibleTo} pro comando de exclusão/versionamento: documento
+   * já excluído não pode ser excluído/substituído de novo — responde {@code NOT_FOUND}
+   * (não {@code FORBIDDEN}), consistente com "não existe mais" pra quem chama.
+   */
   private Optional<DocumentEntity> findInTenant(final UUID documentId, final String tenantId) {
     return documents.findById(documentId)
+      .filter(DocumentEntity::isActive)
       .filter(document -> document.getTenantId().equals(tenantId));
   }
 
