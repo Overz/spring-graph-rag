@@ -59,7 +59,7 @@ public class DocumentLifecycleService implements DocumentCommandApi {
   @Override
   @Transactional(readOnly = true)
   public boolean successfulDuplicateExists(final String tenantId, final String ownerId, final String sha256) {
-    return documents.existsByTenantIdAndOwnerIdAndFileHashSha256AndStatusNot(
+    return documents.existsByTenantIdAndOwnerIdAndFileHashSha256AndStatusNotAndActiveTrue(
       tenantId, ownerId, sha256, DocumentStatus.FAILED);
   }
 

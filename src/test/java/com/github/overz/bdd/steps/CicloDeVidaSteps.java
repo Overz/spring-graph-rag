@@ -193,6 +193,10 @@ public class CicloDeVidaSteps {
     assertThat(statusAposExclusao.getStatusCode().value())
       .as("documento excluído não deve mais responder por GET /status")
       .isEqualTo(404);
+
+    // RF07 não deve bloquear reenvio do mesmo conteúdo depois que o original foi excluído
+    // logicamente — duplicidade só se aplica a documento ainda ATIVO.
+    assertThat(uploadArquivo("dev_user", documento)).as("reenvio aceito após exclusão").isNotNull();
   }
 
   @Entao("deve inativar os vetores correspondentes no OpenSearch")

@@ -11,10 +11,12 @@ import java.util.UUID;
 public interface DocumentRepository extends JpaRepository<DocumentEntity, UUID> {
 
   /**
-   * Duplicidade (RF07/D7): qualquer documento do mesmo tenant+owner com o hash cujo
-   * status não seja {@code FAILED} bloqueia o reenvio.
+   * Duplicidade (RF07/D7): qualquer documento ATIVO do mesmo tenant+owner com o hash cujo
+   * status não seja {@code FAILED} bloqueia o reenvio — um documento já excluído
+   * logicamente (RF10) não conta como duplicata: o conteúdo não está mais "presente" pro
+   * dono, então reenviá-lo é um upload novo e legítimo, não um reenvio redundante.
    */
-  boolean existsByTenantIdAndOwnerIdAndFileHashSha256AndStatusNot(
+  boolean existsByTenantIdAndOwnerIdAndFileHashSha256AndStatusNotAndActiveTrue(
     String tenantId, String ownerId, String fileHashSha256, DocumentStatus status);
 
   /**
