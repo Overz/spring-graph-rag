@@ -1,16 +1,18 @@
 # exclusao-e-versionamento Specification
 
 ## Purpose
-TBD - created by archiving change epico-2-ciclo-de-vida. Update Purpose after archive.
+Garantir que excluir ou substituir um documento (RF10) nunca corrompa o que outros
+documentos ativos compartilham no grafo/índice vetorial, e que a exclusão fique
+restrita ao dono (RF30).
 ## Requirements
 ### Requirement: Exclusão lógica com isolamento de grafo
 
-O sistema SHALL, ao comando de exclusão do dono, marcar `is_active=false` no documento (Postgres), no nó `Document` e em seus `Chunk`s (Neo4j), e inativar os vetores correspondentes (OpenSearch) — síncrono nesta versão (design.md D2). Entidades e relacionamentos conectados a chunks de **outros** documentos ativos SHALL permanecer intactos; entidade cujo único vínculo era com o documento excluído SHALL permanecer no grafo até o Garbage Collection (`garbage-collection-grafo`) remover.
+O sistema SHALL, ao comando de exclusão do dono, marcar `is_active=false` no documento (Postgres), no nó `Document` e em seus `Chunk`s (Neo4j), e inativar os vetores correspondentes (OpenSearch) — síncrono nesta versão (design.md D2). Entidades e relacionamentos conectados a chunks de **outros** documentos ativos SHALL permanecer intactos; entidade cujo único vínculo era com o documento excluído SHALL permanecer no grafo até o Garbage Collection (`garbage-collection-grafo`) remover. A exclusão SHALL registrar uma linha em `document_status_history` (mesmo status, `detail` explicando o evento — rastro de auditoria RF31-adjacent, já que `DELETED` não é um estado de pipeline); a partir daí, o documento não é mais visível pelas consultas de `ciclo-de-vida-documento` (`isActive` estrutural em todo read filter).
 
 #### Scenario: Exclusão mantendo integridade do grafo
 
 - **WHEN** o "Documento_A" é excluído e sua entidade "Spring Boot" também está conectada ao "Documento_B" (outro usuário, mesmo tenant)
-- **THEN** `Documento_A` e seus `Chunk`s ficam `isActive=false`, os vetores correspondentes são inativados no OpenSearch, e a entidade "Spring Boot" é preservada
+- **THEN** `Documento_A` e seus `Chunk`s ficam `isActive=false`, os vetores correspondentes são inativados no OpenSearch, a entidade "Spring Boot" é preservada, e o histórico do "Documento_A" registra a exclusão
 
 #### Scenario: Vetores inativados não aparecem em busca
 

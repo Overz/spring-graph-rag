@@ -1,7 +1,10 @@
 # ciclo-de-vida-documento Specification
 
 ## Purpose
-TBD - created by archiving change epico-2-ciclo-de-vida. Update Purpose after archive.
+Rastrear o ciclo de vida de processamento de um documento (RF08 fork-join) e expor
+consulta de status/histórico completo (RF09) — a base sobre a qual RF10/RF11
+(exclusão, versionamento, garbage collection) e os épicos 3–6 (pipeline real)
+se apoiam.
 ## Requirements
 ### Requirement: Máquina de estados com fork-join independente
 
@@ -24,7 +27,7 @@ O sistema SHALL transitar o documento pelos status `RECEIVED → VALIDATING → 
 
 ### Requirement: Consulta de status atual e histórico completo
 
-O sistema SHALL expor consulta do status atual e do histórico completo de transições (etapa, status resultante, timestamp, em ordem cronológica) de um documento (RF09). Documento inexistente (ou de outro tenant/dono) SHALL responder erro de "não encontrado" limpo, sem expor detalhe do motivo real da negativa.
+O sistema SHALL expor consulta do status atual e do histórico completo de transições (etapa, status resultante, timestamp, em ordem cronológica) de um documento (RF09). Documento inexistente, de outro tenant/dono, ou já excluído logicamente (`isActive=false`) SHALL responder erro de "não encontrado" limpo, sem expor detalhe do motivo real da negativa.
 
 #### Scenario: Consulta do status atual
 
@@ -40,4 +43,9 @@ O sistema SHALL expor consulta do status atual e do histórico completo de trans
 
 - **WHEN** o usuário consulta o status de um id que não existe
 - **THEN** a resposta é rejeitada com "Documento não encontrado"
+
+#### Scenario: Consulta de documento excluído logicamente
+
+- **WHEN** o usuário consulta o status ou o histórico de um documento que ele mesmo excluiu (`exclusao-e-versionamento`)
+- **THEN** a resposta é rejeitada com "Documento não encontrado", igual a um id inexistente
 
