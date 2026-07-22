@@ -1,29 +1,6 @@
-# ciclo-de-vida-documento Specification
+## MODIFIED Requirements
 
-## Purpose
-Rastrear o ciclo de vida de processamento de um documento (RF08 fork-join) e expor
-consulta de status/histórico completo (RF09) — a base sobre a qual RF10/RF11
-(exclusão, versionamento, garbage collection) e os épicos 3–6 (pipeline real)
-se apoiam.
-## Requirements
-### Requirement: Máquina de estados com fork-join independente
-
-O sistema SHALL transitar o documento pelos status `RECEIVED → VALIDATING → UPLOADED → QUEUED → EXTRACTING → TRANSFORMING → CHUNKING`, e a partir de `CHUNKING` SHALL disparar os ramos `EMBEDDING` e `GRAPH_BUILDING` com sub-estados independentes (`embeddingStatus`, `graphStatus`). O status agregado SHALL ser derivado dos dois sub-estados: ambos concluídos → `COMPLETED`; um concluído e o outro falhado definitivamente → `PARTIALLY_COMPLETED`; ambos falhados definitivamente → `FAILED`. Falha em um ramo SHALL NOT afetar o outro.
-
-#### Scenario: Sub-estados independentes dos ramos paralelos
-
-- **WHEN** o documento concluiu `CHUNKING` e o ramo `EMBEDDING` termina enquanto `GRAPH_BUILDING` ainda executa
-- **THEN** `embeddingStatus` é `COMPLETED` e `graphStatus` é `RUNNING`, e o status geral é derivado dos dois
-
-#### Scenario: Sucesso em um ramo com falha definitiva no outro
-
-- **WHEN** o ramo `EMBEDDING` conclui com sucesso e o ramo `GRAPH_BUILDING` falha definitivamente após esgotar retries
-- **THEN** o documento é marcado `PARTIALLY_COMPLETED` e os chunks permanecem disponíveis para busca vetorial (RF25)
-
-#### Scenario: Falha definitiva em ambos os ramos
-
-- **WHEN** `EMBEDDING` e `GRAPH_BUILDING` falham definitivamente
-- **THEN** o documento é marcado `FAILED`
+> RF09 revisado (`docs/requisitos.md`). Motivo: a listagem tenant-wide (`listagem-de-documentos`) só faz sentido se o usuário conseguir depois abrir o detalhe de um documento de outro dono que apareceu na lista — decisão confirmada com o usuário em 2026-07-22 (`design.md` D1). Critérios de aceite executáveis: `src/test/resources/features/ciclo-de-vida/status-e-historico.feature`.
 
 ### Requirement: Consulta de status atual e histórico completo
 
@@ -71,4 +48,3 @@ sobrevive à exclusão lógica.
 
 - **WHEN** o usuário consulta o status de um documento que foi excluído logicamente
 - **THEN** a resposta é rejeitada com "Documento não encontrado", igual a um id inexistente
-

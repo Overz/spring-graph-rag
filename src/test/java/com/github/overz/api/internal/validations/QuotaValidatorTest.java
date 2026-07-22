@@ -7,6 +7,7 @@ import com.github.overz.rag.DocumentCommandApi;
 import com.github.overz.rag.DocumentCommandOutcome;
 import com.github.overz.rag.DocumentHistoryEntry;
 import com.github.overz.rag.DocumentStatus;
+import com.github.overz.rag.DocumentSummary;
 import com.github.overz.rag.RegisteredDocument;
 import com.github.overz.rag.TenantQuota;
 import com.github.overz.rag.TenantUsage;
@@ -14,6 +15,8 @@ import com.github.overz.rag.VersionReplacementResult;
 import com.github.overz.shared.security.CallerContext;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -71,13 +74,18 @@ class QuotaValidatorTest extends Assertions {
       }
 
       @Override
-      public Optional<DocumentStatus> statusOf(final UUID documentId, final String tenantId, final String ownerId) {
+      public Optional<DocumentStatus> statusOf(final UUID documentId, final String tenantId) {
         throw new UnsupportedOperationException();
       }
 
       @Override
-      public Optional<List<DocumentHistoryEntry>> historyOf(
-        final UUID documentId, final String tenantId, final String ownerId
+      public Optional<List<DocumentHistoryEntry>> historyOf(final UUID documentId, final String tenantId) {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Page<DocumentSummary> listDocuments(
+        final String tenantId, final boolean includeInactive, final Pageable pageable
       ) {
         throw new UnsupportedOperationException();
       }

@@ -1,5 +1,8 @@
 package com.github.overz.rag;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,17 +41,28 @@ public interface DocumentCommandApi {
   TenantUsage usageOf(String tenantId);
 
   /**
-   * Status atual do documento (RF09). Inexistente, de outro tenant ou de outro dono
-   * (mesmo tenant) SHALL responder vazio por igual — {@code api} mapeia pra 404 limpo,
-   * sem distinguir o motivo real da negativa.
+   * Status atual do documento (RF09). Leitura é compartilhada entre todo o tenant — só o
+   * tenant precisa bater; documento inexistente ou de outro tenant SHALL responder vazio
+   * por igual, {@code api} mapeia pra 404 limpo sem distinguir o motivo real da negativa.
+   * Documento excluído logicamente também responde vazio (RF10): "status atual" não se
+   * aplica a algo que não existe mais.
    */
-  Optional<DocumentStatus> statusOf(UUID documentId, String tenantId, String ownerId);
+  Optional<DocumentStatus> statusOf(UUID documentId, String tenantId);
 
   /**
-   * Histórico completo de transições do documento, em ordem cronológica (RF09). Mesma
-   * regra de visibilidade de {@link #statusOf}.
+   * Histórico completo de transições do documento, em ordem cronológica (RF09) — mesma
+   * regra de visibilidade tenant-wide de {@link #statusOf}, exceto que sobrevive à
+   * exclusão lógica (auditoria, RF31): documento excluído continua respondendo o
+   * histórico completo, incluindo o próprio evento de exclusão.
    */
-  Optional<List<DocumentHistoryEntry>> historyOf(UUID documentId, String tenantId, String ownerId);
+  Optional<List<DocumentHistoryEntry>> historyOf(UUID documentId, String tenantId);
+
+  /**
+   * Listagem paginada dos documentos do tenant (RF40) — visão compartilhada entre todos
+   * os usuários do tenant; {@code includeInactive=false} (padrão) restringe aos
+   * documentos ainda ativos.
+   */
+  Page<DocumentSummary> listDocuments(String tenantId, boolean includeInactive, Pageable pageable);
 
   /**
    * Exclusão lógica com isolamento de grafo (RF10): {@code is_active=false} no Postgres,

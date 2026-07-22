@@ -40,14 +40,14 @@ public class DocumentLifecycleController {
 
   @GetMapping(path = { "/api/v1/documents/{id}/status" })
   DocumentStatusResponse status(@PathVariable final UUID id, final CallerContext caller) {
-    final var status = documents.statusOf(id, caller.tenantId(), caller.ownerId())
+    final var status = documents.statusOf(id, caller.tenantId())
       .orElseThrow(DocumentNotFoundException::new);
     return DocumentLifecycleResponseMapper.toResponse(status);
   }
 
   @GetMapping(path = { "/api/v1/documents/{id}/history" })
   List<DocumentHistoryEntryResponse> history(@PathVariable final UUID id, final CallerContext caller) {
-    final var entries = documents.historyOf(id, caller.tenantId(), caller.ownerId())
+    final var entries = documents.historyOf(id, caller.tenantId())
       .orElseThrow(DocumentNotFoundException::new);
     return DocumentLifecycleResponseMapper.toResponse(entries);
   }

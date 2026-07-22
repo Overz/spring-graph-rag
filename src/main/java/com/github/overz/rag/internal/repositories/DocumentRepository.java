@@ -2,6 +2,8 @@ package com.github.overz.rag.internal.repositories;
 
 import com.github.overz.rag.DocumentStatus;
 import com.github.overz.rag.internal.models.DocumentEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,5 +39,17 @@ public interface DocumentRepository extends JpaRepository<DocumentEntity, UUID> 
     + "where d.tenantId = :tenantId and d.ownerId = :ownerId and d.fileHashSha256 = :sha256")
   int maxVersionOf(@Param("tenantId") String tenantId, @Param("ownerId") String ownerId,
                    @Param("sha256") String sha256);
+
+  /**
+   * Listagem paginada do tenant inteiro (RF40) — visão compartilhada entre todos os
+   * usuários do tenant, incluindo documentos excluídos logicamente.
+   */
+  Page<DocumentEntity> findByTenantId(String tenantId, Pageable pageable);
+
+  /**
+   * Mesma listagem, restrita aos documentos ainda ativos — comportamento padrão de RF40
+   * (parâmetro {@code includeInactive=false}).
+   */
+  Page<DocumentEntity> findByTenantIdAndActiveTrue(String tenantId, Pageable pageable);
 
 }

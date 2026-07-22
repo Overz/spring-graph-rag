@@ -72,8 +72,14 @@ Funcionalidade: Ciclo de vida de processamento e histórico por documento
     Então a consulta deve retornar sucesso mesmo com o documento excluído
     E a última entrada do histórico deve ter status "DELETED" e detail "Documento excluído logicamente"
 
-  @RF09 @RF30
-  Cenário: Consulta de histórico de documento de outro usuário retorna não encontrado
+  @RF09
+  Cenário: Consulta de histórico de documento de outro usuário do mesmo tenant é permitida
     Dado que o "Documento_C" pertence ao usuário "outra_pessoa" do tenant "acme_inc"
     Quando o "dev_user" consultar o histórico do "Documento_C"
+    Então a consulta deve retornar sucesso
+
+  @RF09 @RF30
+  Cenário: Consulta de histórico de documento de outro tenant retorna não encontrado
+    Dado que o "Documento_Globex" pertence ao usuário "usuario_globex" do tenant "globex"
+    Quando o "dev_user" consultar o histórico do "Documento_Globex"
     Então a consulta deve ser rejeitada com um erro de "Documento não encontrado"

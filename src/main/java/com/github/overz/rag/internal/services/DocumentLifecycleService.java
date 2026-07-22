@@ -5,6 +5,7 @@ import com.github.overz.rag.DocumentCommandApi;
 import com.github.overz.rag.DocumentCommandOutcome;
 import com.github.overz.rag.DocumentHistoryEntry;
 import com.github.overz.rag.DocumentStatus;
+import com.github.overz.rag.DocumentSummary;
 import com.github.overz.rag.RegisteredDocument;
 import com.github.overz.rag.TenantQuota;
 import com.github.overz.rag.TenantUsage;
@@ -21,6 +22,8 @@ import com.github.overz.rag.internal.repositories.TenantQuotaRepository;
 import com.github.overz.shared.logging.ILogger;
 import com.github.overz.shared.logging.LoggerFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -80,19 +83,36 @@ public class DocumentLifecycleService implements DocumentCommandApi {
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<DocumentStatus> statusOf(final UUID documentId, final String tenantId, final String ownerId) {
-    return findVisibleTo(documentId, tenantId, ownerId).map(DocumentEntity::getStatus);
+  public Optional<DocumentStatus> statusOf(final UUID documentId, final String tenantId) {
+    return findVisibleTo(documentId, tenantId).map(DocumentEntity::getStatus);
   }
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<List<DocumentHistoryEntry>> historyOf(
-    final UUID documentId, final String tenantId, final String ownerId
-  ) {
-    return findAccessibleTo(documentId, tenantId, ownerId)
+  public Optional<List<DocumentHistoryEntry>> historyOf(final UUID documentId, final String tenantId) {
+    return findAccessibleTo(documentId, tenantId)
       .map(document -> history.findByDocumentIdOrderByOccurredAtAsc(documentId).stream()
         .map(entry -> new DocumentHistoryEntry(entry.getToStatus(), entry.getOccurredAt(), entry.getDetail()))
         .toList());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Page<DocumentSummary> listDocuments(
+    final String tenantId, final boolean includeInactive, final Pageable pageable
+  ) {
+    final var page = includeInactive
+      ? documents.findByTenantId(tenantId, pageable)
+      : documents.findByTenantIdAndActiveTrue(tenantId, pageable);
+    return page.map(document -> DocumentSummary.builder()
+      .id(document.getId())
+      .filename(document.getFilename())
+      .status(document.getStatus())
+      .ownerId(document.getOwnerId())
+      .version(document.getVersion())
+      .createdAt(document.getUploadedAt())
+      .updatedAt(document.getUpdatedAt())
+      .build());
   }
 
   @Override
@@ -208,26 +228,25 @@ public class DocumentLifecycleService implements DocumentCommandApi {
   }
 
   /**
-   * Usado só por {@link #statusOf}: {@code isActive} estrutural (CLAUDE.md, multitenancy)
-   * — documento excluído logicamente não tem "status atual", responde igual a inexistente.
+   * Usado só por {@link #statusOf}: leitura é tenant-wide (qualquer usuário do tenant vê
+   * status de qualquer documento do tenant — decisão RF40), só {@code isActive} e
+   * {@code tenantId} são estruturais aqui. Documento excluído logicamente não tem "status
+   * atual", responde igual a inexistente.
    */
-  private Optional<DocumentEntity> findVisibleTo(final UUID documentId, final String tenantId, final String ownerId) {
+  private Optional<DocumentEntity> findVisibleTo(final UUID documentId, final String tenantId) {
     return documents.findById(documentId)
       .filter(DocumentEntity::isActive)
-      .filter(document -> document.getTenantId().equals(tenantId))
-      .filter(document -> document.getOwnerId().equals(ownerId));
+      .filter(document -> document.getTenantId().equals(tenantId));
   }
 
   /**
-   * Usado só por {@link #historyOf}: sem filtro {@code isActive} — auditoria (RF31) deve
-   * sobreviver à exclusão lógica, incluindo a própria linha de exclusão (ver
-   * {@link #softDelete}). Isolamento de tenant/owner continua obrigatório — só a
-   * visibilidade "documento vivo" é que não se aplica aqui.
+   * Usado só por {@link #historyOf}: mesma leitura tenant-wide de {@link #findVisibleTo},
+   * sem filtro {@code isActive} — auditoria (RF31) deve sobreviver à exclusão lógica,
+   * incluindo a própria linha de exclusão (ver {@link #softDelete}).
    */
-  private Optional<DocumentEntity> findAccessibleTo(final UUID documentId, final String tenantId, final String ownerId) {
+  private Optional<DocumentEntity> findAccessibleTo(final UUID documentId, final String tenantId) {
     return documents.findById(documentId)
-      .filter(document -> document.getTenantId().equals(tenantId))
-      .filter(document -> document.getOwnerId().equals(ownerId));
+      .filter(document -> document.getTenantId().equals(tenantId));
   }
 
   /**

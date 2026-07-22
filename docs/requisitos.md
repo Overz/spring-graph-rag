@@ -54,6 +54,8 @@ Implicações:
 ### RF09 - Consulta e Histórico
 O sistema deve permitir consultar o status atual e registrar o histórico completo das etapas executadas por arquivo.
 
+**RF09 (revisão) — Visibilidade compartilhada no tenant:** a consulta de status e histórico não é restrita ao dono do documento — qualquer usuário autenticado do mesmo tenant pode consultar status/histórico de qualquer documento do tenant (visão compartilhada, RF40). Isolamento entre tenants continua absoluto (RF30): documento de outro tenant responde como inexistente. Exclusão/substituição de versão continuam restritas ao dono (RF10).
+
 ### RF10 - Estratégia de Atualização e Exclusão (Soft Delete)
 - O sistema deve permitir substituir ou excluir um arquivo no Object Storage para o usuário em questão.
 - **Isolamento de Grafo:** A exclusão/substituição de um arquivo marca o nó `Document` e seus `Chunks` associados com uma flag `isActive = false` no banco de grafos (Neo4j) e inativa/remove seus embeddings no VectorDB (OpenSearch).
@@ -63,6 +65,14 @@ O sistema deve permitir consultar o status atual e registrar o histórico comple
 
 ### RF11 - Expurgamento de Entidades Órfãs (Garbage Collection)
 Um processo em background deve varrer o banco de grafos periodicamente para remover fisicamente nós de entidades e relacionamentos que não possuem mais conexões com nenhum chunk ativo (`isActive = true`).
+
+### RF40 - Listagem de Documentos
+O sistema deve permitir listar os documentos de um tenant de forma paginada — visão compartilhada entre todos os usuários autenticados do tenant (mesma regra de RF09 revisado), não restrita ao dono de cada documento.
+
+- Por padrão, a listagem traz apenas documentos ativos (`isActive = true`); um parâmetro opcional permite incluir também os excluídos logicamente, com o padrão desligado (`includeInactive = false`).
+- Nomes de arquivo duplicados entre documentos distintos são permitidos e não são deduplicados na listagem.
+- Cada item traz, no mínimo: identificador, nome do arquivo, status atual, quem enviou (`ownerId`), versão, data de criação e data da última atualização.
+- Isolamento entre tenants é absoluto (RF30): a listagem nunca inclui documentos de outro tenant.
 
 ---
 

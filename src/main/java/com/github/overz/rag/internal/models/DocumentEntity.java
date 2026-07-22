@@ -6,6 +6,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -85,5 +87,14 @@ public class DocumentEntity {
 
   @Column(name = "completed_at")
   private OffsetDateTime completedAt;
+
+  @Column(name = "updated_at", nullable = false)
+  private OffsetDateTime updatedAt;
+
+  @PrePersist
+  @PreUpdate
+  private void touchUpdatedAt() {
+    updatedAt = OffsetDateTime.now();
+  }
 
 }

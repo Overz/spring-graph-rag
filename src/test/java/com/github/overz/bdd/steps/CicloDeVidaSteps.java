@@ -26,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -49,7 +50,8 @@ public class CicloDeVidaSteps {
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final Map<String, String> REALM_USERS = Map.of(
     "dev_user", "alice",
-    "outra_pessoa", "bob"
+    "outra_pessoa", "bob",
+    "usuario_globex", "carol"
   );
   private static final List<String> PRE_FORK_SEQUENCE = List.of("QUEUED", "EXTRACTING", "TRANSFORMING", "CHUNKING");
   private static final String CHUNK_INDEX_ALIAS = "chunks";
@@ -77,7 +79,7 @@ public class CicloDeVidaSteps {
   private String currentId;
   private ResponseEntity<String> response;
 
-  @Before("@RF08 or @RF09 or @RF10 or @RF11")
+  @Before("@RF08 or @RF09 or @RF10 or @RF11 or @RF40")
   public void limparEstadoDeCicloDeVida() throws IOException {
     jdbc.update("DELETE FROM document_status_history");
     jdbc.update("DELETE FROM processing_errors");
@@ -540,6 +542,7 @@ public class CicloDeVidaSteps {
   }
 
   @Entao("a consulta deve retornar sucesso mesmo com o documento excluído")
+  @Entao("a consulta deve retornar sucesso")
   public void aConsultaDeveRetornarSucessoMesmoComODocumento() {
     assertThat(response.getStatusCode().value()).as("corpo=%s", response.getBody()).isEqualTo(200);
   }
@@ -550,6 +553,74 @@ public class CicloDeVidaSteps {
     final var ultima = entradas.get(entradas.size() - 1);
     assertThat(ultima.path("status").asText()).isEqualTo(statusEsperado);
     assertThat(ultima.path("detail").asText()).isEqualTo(detailEsperado);
+  }
+
+  // ---------------------------------------------------------------- RF40 Listagem de documentos
+
+  @Dado("que o {string} enviou o arquivo {string}")
+  public void queOStringEnviouOArquivoString(String usuarioLogico, String arquivo) {
+    final var documentId = uploadArquivo(usuarioLogico, arquivo).toString();
+    docIds.put(arquivo, documentId);
+  }
+
+  @Dado("que o {string} enviou {int} arquivos distintos")
+  public void queOStringEnviouIntArquivosDistintos(String usuarioLogico, int quantidade) {
+    for (var i = 0; i < quantidade; i++) {
+      uploadArquivo(usuarioLogico, "arquivo-" + i + ".pdf", SyntheticFiles.deterministicPdf("distinto-" + i));
+    }
+  }
+
+  @Quando("o usuário listar os documentos do tenant")
+  public void oUsuarioListarOsDocumentosDoTenant() {
+    response = listarDocumentos("dev_user", false, null);
+  }
+
+  @Quando("o usuário listar os documentos do tenant incluindo inativos")
+  public void oUsuarioListarOsDocumentosDoTenantIncluindoInativos() {
+    response = listarDocumentos("dev_user", true, null);
+  }
+
+  @Quando("o usuário listar os documentos do tenant com tamanho de página {int}")
+  public void oUsuarioListarOsDocumentosDoTenantComTamanhoDePagina(int tamanho) {
+    response = listarDocumentos("dev_user", false, tamanho);
+  }
+
+  @Entao("a listagem deve conter o arquivo {string}")
+  public void aListagemDeveConterOArquivoString(String arquivo) {
+    final var idEsperado = docIds.get(arquivo);
+    final var presente = conteudoDaListagem().stream().anyMatch(item -> idEsperado.equals(item.path("id").asText()));
+    assertThat(presente).as("listagem contém '%s' (id=%s); corpo=%s", arquivo, idEsperado, response.getBody()).isTrue();
+  }
+
+  @Entao("a listagem não deve conter o arquivo {string}")
+  public void aListagemNaoDeveConterOArquivoString(String arquivo) {
+    final var idEsperado = docIds.get(arquivo);
+    final var presente = conteudoDaListagem().stream().anyMatch(item -> idEsperado.equals(item.path("id").asText()));
+    assertThat(presente).as("listagem não deveria conter '%s' (id=%s); corpo=%s", arquivo, idEsperado, response.getBody()).isFalse();
+  }
+
+  @Entao("cada item da listagem deve informar quem enviou")
+  public void cadaItemDaListagemDeveInformarQuemEnviou() {
+    final var itens = conteudoDaListagem();
+    assertThat(itens).isNotEmpty();
+    for (final var item : itens) {
+      assertThat(item.path("ownerId").asText()).isNotBlank();
+    }
+  }
+
+  @Entao("a página retornada deve conter {int} itens")
+  public void aPaginaRetornadaDeveConterIntItens(int esperado) {
+    assertThat(conteudoDaListagem()).hasSize(esperado);
+  }
+
+  @Entao("deve haver mais de uma página de resultado")
+  public void deveHaverMaisDeUmaPaginaDeResultado() {
+    try {
+      final var totalPages = JSON.readTree(response.getBody()).path("totalPages").asInt();
+      assertThat(totalPages).as("corpo=%s", response.getBody()).isGreaterThan(1);
+    } catch (IOException e) {
+      throw new UncheckedIOException("Corpo de resposta não é JSON: " + response.getBody(), e);
+    }
   }
 
   // ---------------------------------------------------------------- apoio HTTP
@@ -634,6 +705,30 @@ public class CicloDeVidaSteps {
       .retrieve()
       .onStatus(s -> true, (req, res) -> { })
       .toEntity(String.class);
+  }
+
+  private ResponseEntity<String> listarDocumentos(String usuarioLogico, boolean includeInactive, Integer tamanhoDePagina) {
+    final var uri = UriComponentsBuilder.fromPath("/api/v1/documents").queryParam("includeInactive", includeInactive);
+    if (tamanhoDePagina != null) {
+      uri.queryParam("size", tamanhoDePagina);
+    }
+    return http().get()
+      .uri(uri.build().toUriString())
+      .headers(h -> h.setBearerAuth(tokenDe(usuarioLogico)))
+      .retrieve()
+      .onStatus(s -> true, (req, res) -> { })
+      .toEntity(String.class);
+  }
+
+  private List<JsonNode> conteudoDaListagem() {
+    try {
+      final var arr = JSON.readTree(response.getBody()).path("content");
+      final var lista = new java.util.ArrayList<JsonNode>();
+      arr.forEach(lista::add);
+      return lista;
+    } catch (IOException e) {
+      throw new UncheckedIOException("Corpo de resposta não é JSON: " + response.getBody(), e);
+    }
   }
 
   private ResponseEntity<String> deleteDocumento(String documentId, String usuarioLogico) {
