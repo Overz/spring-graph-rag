@@ -16,9 +16,14 @@ Todos os endpoints exigem JWT (ver `seguranca.md`); `tenantId`/`ownerId` saem **
 | `GET /api/v1/documents` (`?page,size,sort,includeInactive`) | `200` (página compartilhada no tenant, RF40 — não restrita ao dono; `includeInactive=false` por padrão) | — |
 | `GET /api/v1/documents/{id}/status` | `200` (leitura compartilhada no tenant, RF09 revisado — não restrita ao dono) | `404` (inexistente, de outro tenant, ou já excluído logicamente — mesma resposta, sem vazar existência) |
 | `GET /api/v1/documents/{id}/history` | `200` (idem; sobrevive à exclusão lógica — inclui o próprio evento de exclusão, RF31) | `404` (inexistente ou de outro tenant) |
-| `DELETE /api/v1/documents/{id}` | `202` (soft delete assíncrono nas 3 bases) | `404` idem |
-| `POST /api/v1/documents/{id}/reprocess` | `202` (retoma da última etapa concluída) | `404`, `409` (documento em processamento) |
-| `POST /api/v1/documents/{id}/versions` (multipart) | `202` (nova versão; anterior → soft delete) | validações do upload + `404` |
+| `DELETE /api/v1/documents/{id}` | `204` (soft delete síncrono nas 3 bases, design.md D2 do épico-2) | `404` (inexistente/outro tenant), `403` (mesmo tenant, outro dono) |
+| `POST /api/v1/documents/{id}/versions` (multipart) | `202` (nova versão; anterior → soft delete) | validações do upload + `404`/`403` |
+
+Reprocessamento explícito (retomar etapa sem enviar conteúdo novo) é capacidade
+própria, ainda **não desenhada nem implementada** — não confundir com `/versions`
+(que sempre reprocessa porque o conteúdo é novo). Cenário `@pendente` em
+`ingestao/validacao.feature` até esse desenho existir; planejamento fica pra
+quando a fila de eventos (RF12/RF13, Épico 3) estiver pronta.
 
 **Resposta do `202` de upload:**
 
