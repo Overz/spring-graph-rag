@@ -173,14 +173,14 @@ public class DocumentLifecycleService implements DocumentCommandApi {
     document.setActive(false);
     documents.save(document);
 
-    // Rastro de auditoria da exclusão (RF31): DocumentStatus não tem estado "excluído" —
-    // não é etapa de pipeline, é uma flag ortogonal (isActive) — então a transição não
-    // muda de status (from == to, o que já tinha), só o detail explica o evento. Servida
-    // por GET /history (findAccessibleTo não filtra isActive — auditoria sobrevive à
-    // exclusão de propósito); até o audit_log dedicado (RF31, Épico futuro) existir, esta
-    // linha em document_status_history é o único registro do evento de exclusão.
+    // Rastro de auditoria da exclusão (RF31): documents.status não muda (isActive é a flag
+    // ortogonal que representa a exclusão ali) — mas o histórico grava a transição real
+    // do último status de pipeline para o marcador DELETED, para ficar distinguível de uma
+    // transição de pipeline de verdade. Servida por GET /history (findAccessibleTo não
+    // filtra isActive — auditoria sobrevive à exclusão de propósito); até o audit_log
+    // dedicado (RF31, Épico futuro) existir, esta linha é o único registro do evento.
     history.save(DocumentStatusHistoryEntity.transition(
-      document.getId(), document.getStatus(), document.getStatus(), OffsetDateTime.now(),
+      document.getId(), document.getStatus(), DocumentStatus.DELETED, OffsetDateTime.now(),
       "Documento excluído logicamente"));
 
     final var documentId = document.getId().toString();

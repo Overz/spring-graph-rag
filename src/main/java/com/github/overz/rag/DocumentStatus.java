@@ -25,6 +25,11 @@ public enum DocumentStatus {
   TRANSFORMATION_FAILED,
   CHUNKING_FAILED,
   EMBEDDING_FAILED,
-  GRAPH_BUILDING_FAILED
+  GRAPH_BUILDING_FAILED,
+
+  // Marcador de auditoria da exclusão lógica (RF10/RF31) — não é etapa de pipeline, nunca
+  // é escrito em documents.status (isActive, não status, é quem representa a exclusão ali).
+  // Só aparece como to_status em document_status_history, na linha gravada por softDelete.
+  DELETED
 
 }
