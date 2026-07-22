@@ -71,7 +71,8 @@ O sistema deve permitir listar os documentos de um tenant de forma paginada — 
 
 - Por padrão, a listagem traz apenas documentos ativos (`isActive = true`); um parâmetro opcional permite incluir também os excluídos logicamente, com o padrão desligado (`includeInactive = false`).
 - Nomes de arquivo duplicados entre documentos distintos são permitidos e não são deduplicados na listagem.
-- Cada item traz, no mínimo: identificador, nome do arquivo, status atual, quem enviou (`ownerId`), versão, data de criação e data da última atualização.
+- Cada item traz, no mínimo: identificador, nome do arquivo, status atual, uma flag booleana de ativo/inativo, quem enviou (`ownerId`), versão, data de criação e data da última atualização.
+- Documento excluído logicamente responde com status `DELETED` (estado terminal persistido pela exclusão, não um estágio de pipeline) e a flag de ativo em `false`.
 - Isolamento entre tenants é absoluto (RF30): a listagem nunca inclui documentos de outro tenant.
 
 ---

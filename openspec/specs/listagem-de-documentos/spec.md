@@ -14,9 +14,11 @@ qualquer usuário autenticado do tenant — não restrita ao dono de cada docume
 padrão SHALL trazer apenas documentos ativos (`isActive=true`); um parâmetro opcional
 `includeInactive` (padrão `false`) SHALL incluir também os excluídos logicamente. Nomes
 de arquivo duplicados entre documentos distintos SHALL ser permitidos, sem deduplicação.
-Cada item SHALL trazer, no mínimo: identificador, nome do arquivo, status atual, quem
-enviou (`ownerId`), versão, data de criação e data da última atualização. A listagem
-SHALL NOT incluir documentos de outro tenant.
+Cada item SHALL trazer, no mínimo: identificador, nome do arquivo, status atual, uma
+flag booleana de ativo/inativo, quem enviou (`ownerId`), versão, data de criação e data
+da última atualização. Documento excluído logicamente SHALL reportar status `DELETED`
+(estado terminal persistido pela exclusão, não um estágio de pipeline) e a flag de
+ativo em `false`. A listagem SHALL NOT incluir documentos de outro tenant.
 
 #### Scenario: Listagem traz apenas documentos ativos por padrão
 
@@ -26,7 +28,9 @@ SHALL NOT incluir documentos de outro tenant.
 #### Scenario: Listagem com includeInactive traz também documentos excluídos
 
 - **WHEN** o usuário lista com `includeInactive=true`
-- **THEN** a listagem contém tanto o documento ativo quanto o excluído logicamente
+- **THEN** a listagem contém tanto o documento ativo quanto o excluído logicamente, o
+  item excluído com status `DELETED` e a flag de ativo em `false`, o item ativo com seu
+  status real e a flag de ativo em `true`
 
 #### Scenario: Listagem é compartilhada entre usuários do mesmo tenant
 

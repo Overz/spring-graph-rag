@@ -13,8 +13,9 @@ Todos os endpoints exigem JWT (ver `seguranca.md`); `tenantId`/`ownerId` saem **
 | Endpoint | Sucesso | Erros principais |
 |---|---|---|
 | `POST /api/v1/documents` (multipart: `file`) | `202 Accepted` | ver tabela de validações (§2) |
-| `GET /api/v1/documents/{id}/status` | `200` | `404` (inexistente **ou de outro tenant/dono** — mesma resposta, sem vazar existência) |
-| `GET /api/v1/documents/{id}/history` | `200` (lista de transições) | `404` idem |
+| `GET /api/v1/documents` (`?page,size,sort,includeInactive`) | `200` (página compartilhada no tenant, RF40 — não restrita ao dono; `includeInactive=false` por padrão) | — |
+| `GET /api/v1/documents/{id}/status` | `200` (leitura compartilhada no tenant, RF09 revisado — não restrita ao dono) | `404` (inexistente, de outro tenant, ou já excluído logicamente — mesma resposta, sem vazar existência) |
+| `GET /api/v1/documents/{id}/history` | `200` (idem; sobrevive à exclusão lógica — inclui o próprio evento de exclusão, RF31) | `404` (inexistente ou de outro tenant) |
 | `DELETE /api/v1/documents/{id}` | `202` (soft delete assíncrono nas 3 bases) | `404` idem |
 | `POST /api/v1/documents/{id}/reprocess` | `202` (retoma da última etapa concluída) | `404`, `409` (documento em processamento) |
 | `POST /api/v1/documents/{id}/versions` (multipart) | `202` (nova versão; anterior → soft delete) | validações do upload + `404` |
