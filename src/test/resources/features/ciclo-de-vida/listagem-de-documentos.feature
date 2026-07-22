@@ -23,6 +23,8 @@ Funcionalidade: Listagem paginada de documentos
     Quando o usuário listar os documentos do tenant incluindo inativos
     Então a listagem deve conter o arquivo "ativo.pdf"
     E a listagem deve conter o arquivo "sera-excluido.pdf"
+    E o item "sera-excluido.pdf" da listagem deve ter status "DELETED" e active "false"
+    E o item "ativo.pdf" da listagem deve ter status "UPLOADED" e active "true"
 
   @RF40
   Cenário: Listagem é compartilhada entre usuários do mesmo tenant

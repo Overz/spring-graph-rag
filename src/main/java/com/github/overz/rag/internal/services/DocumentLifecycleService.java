@@ -108,6 +108,7 @@ public class DocumentLifecycleService implements DocumentCommandApi {
       .id(document.getId())
       .filename(document.getFilename())
       .status(document.getStatus())
+      .active(document.isActive())
       .ownerId(document.getOwnerId())
       .version(document.getVersion())
       .createdAt(document.getUploadedAt())
@@ -190,17 +191,18 @@ public class DocumentLifecycleService implements DocumentCommandApi {
    * inconsistência temporária aceita (mitigação: reconciliação do Épico 8/RF38).
    */
   private void softDelete(final DocumentEntity document) {
+    // Rastro de auditoria da exclusão (RF31): captura o último status real de pipeline
+    // como "from" antes de sobrescrever — documents.status vira DELETED de propósito
+    // (persistido, não apenas derivado na leitura), único estado terminal que não é
+    // etapa de pipeline; todo leitor (listagem, SQL cru, futuro audit_log) enxerga o
+    // mesmo valor sem precisar de lógica condicional própria.
+    final var ultimoStatusReal = document.getStatus();
     document.setActive(false);
+    document.setStatus(DocumentStatus.DELETED);
     documents.save(document);
 
-    // Rastro de auditoria da exclusão (RF31): documents.status não muda (isActive é a flag
-    // ortogonal que representa a exclusão ali) — mas o histórico grava a transição real
-    // do último status de pipeline para o marcador DELETED, para ficar distinguível de uma
-    // transição de pipeline de verdade. Servida por GET /history (findAccessibleTo não
-    // filtra isActive — auditoria sobrevive à exclusão de propósito); até o audit_log
-    // dedicado (RF31, Épico futuro) existir, esta linha é o único registro do evento.
     history.save(DocumentStatusHistoryEntity.transition(
-      document.getId(), document.getStatus(), DocumentStatus.DELETED, OffsetDateTime.now(),
+      document.getId(), ultimoStatusReal, DocumentStatus.DELETED, OffsetDateTime.now(),
       "Documento excluído logicamente"));
 
     final var documentId = document.getId().toString();

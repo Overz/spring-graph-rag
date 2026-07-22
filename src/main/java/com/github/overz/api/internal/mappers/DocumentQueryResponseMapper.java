@@ -26,6 +26,7 @@ public final class DocumentQueryResponseMapper {
       .id(summary.id())
       .filename(summary.filename())
       .status(summary.status().name())
+      .active(summary.active())
       .ownerId(summary.ownerId())
       .version(summary.version())
       .createdAt(summary.createdAt())

@@ -27,9 +27,12 @@ public enum DocumentStatus {
   EMBEDDING_FAILED,
   GRAPH_BUILDING_FAILED,
 
-  // Marcador de auditoria da exclusão lógica (RF10/RF31) — não é etapa de pipeline, nunca
-  // é escrito em documents.status (isActive, não status, é quem representa a exclusão ali).
-  // Só aparece como to_status em document_status_history, na linha gravada por softDelete.
+  // Estado terminal da exclusão lógica (RF10/RF31) — não é etapa de pipeline, mas é
+  // persistido em documents.status por softDelete (RF40: listagem/leitura direta
+  // precisam ver a exclusão sem lógica condicional própria); isActive continua sendo o
+  // flag estrutural que os stores/filtros usam, DELETED é só a representação legível do
+  // mesmo evento. O último status real de pipeline fica preservado em
+  // document_status_history.from_status na linha da exclusão.
   DELETED
 
 }

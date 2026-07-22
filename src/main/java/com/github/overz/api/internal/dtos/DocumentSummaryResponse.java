@@ -12,6 +12,7 @@ public record DocumentSummaryResponse(
   UUID id,
   String filename,
   String status,
+  boolean active,
   String ownerId,
   int version,
   OffsetDateTime createdAt,

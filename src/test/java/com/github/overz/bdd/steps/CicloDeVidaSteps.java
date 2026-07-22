@@ -599,6 +599,18 @@ public class CicloDeVidaSteps {
     assertThat(presente).as("listagem não deveria conter '%s' (id=%s); corpo=%s", arquivo, idEsperado, response.getBody()).isFalse();
   }
 
+  @Entao("o item {string} da listagem deve ter status {string} e active {string}")
+  public void oItemStringDaListagemDeveTerStatusEActive(String arquivo, String statusEsperado, String activeEsperado) {
+    final var idEsperado = docIds.get(arquivo);
+    final var item = conteudoDaListagem().stream()
+      .filter(entrada -> idEsperado.equals(entrada.path("id").asText()))
+      .findFirst()
+      .orElseThrow(() -> new AssertionError("item '%s' (id=%s) não encontrado na listagem; corpo=%s"
+        .formatted(arquivo, idEsperado, response.getBody())));
+    assertThat(item.path("status").asText()).isEqualTo(statusEsperado);
+    assertThat(item.path("active").asText()).isEqualTo(activeEsperado);
+  }
+
   @Entao("cada item da listagem deve informar quem enviou")
   public void cadaItemDaListagemDeveInformarQuemEnviou() {
     final var itens = conteudoDaListagem();
