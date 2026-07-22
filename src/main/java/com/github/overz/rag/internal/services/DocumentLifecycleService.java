@@ -89,7 +89,7 @@ public class DocumentLifecycleService implements DocumentCommandApi {
   public Optional<List<DocumentHistoryEntry>> historyOf(
     final UUID documentId, final String tenantId, final String ownerId
   ) {
-    return findVisibleTo(documentId, tenantId, ownerId)
+    return findAccessibleTo(documentId, tenantId, ownerId)
       .map(document -> history.findByDocumentIdOrderByOccurredAtAsc(documentId).stream()
         .map(entry -> new DocumentHistoryEntry(entry.getToStatus(), entry.getOccurredAt(), entry.getDetail()))
         .toList());
@@ -175,10 +175,10 @@ public class DocumentLifecycleService implements DocumentCommandApi {
 
     // Rastro de auditoria da exclusão (RF31): DocumentStatus não tem estado "excluído" —
     // não é etapa de pipeline, é uma flag ortogonal (isActive) — então a transição não
-    // muda de status (from == to, o que já tinha), só o detail explica o evento. Fica no
-    // histórico para quando o audit_log dedicado (RF31, Épico futuro) existir; até lá,
-    // não é mais consultável por GET /history assim que isActive vira false (ver
-    // findVisibleTo) — a linha permanece no Postgres, só não é servida por este endpoint.
+    // muda de status (from == to, o que já tinha), só o detail explica o evento. Servida
+    // por GET /history (findAccessibleTo não filtra isActive — auditoria sobrevive à
+    // exclusão de propósito); até o audit_log dedicado (RF31, Épico futuro) existir, esta
+    // linha em document_status_history é o único registro do evento de exclusão.
     history.save(DocumentStatusHistoryEntity.transition(
       document.getId(), document.getStatus(), document.getStatus(), OffsetDateTime.now(),
       "Documento excluído logicamente"));
@@ -208,12 +208,24 @@ public class DocumentLifecycleService implements DocumentCommandApi {
   }
 
   /**
-   * {@code isActive} estrutural em todo read filter (CLAUDE.md, multitenancy): documento
-   * excluído logicamente responde igual a inexistente — não é mais visível por aqui.
+   * Usado só por {@link #statusOf}: {@code isActive} estrutural (CLAUDE.md, multitenancy)
+   * — documento excluído logicamente não tem "status atual", responde igual a inexistente.
    */
   private Optional<DocumentEntity> findVisibleTo(final UUID documentId, final String tenantId, final String ownerId) {
     return documents.findById(documentId)
       .filter(DocumentEntity::isActive)
+      .filter(document -> document.getTenantId().equals(tenantId))
+      .filter(document -> document.getOwnerId().equals(ownerId));
+  }
+
+  /**
+   * Usado só por {@link #historyOf}: sem filtro {@code isActive} — auditoria (RF31) deve
+   * sobreviver à exclusão lógica, incluindo a própria linha de exclusão (ver
+   * {@link #softDelete}). Isolamento de tenant/owner continua obrigatório — só a
+   * visibilidade "documento vivo" é que não se aplica aqui.
+   */
+  private Optional<DocumentEntity> findAccessibleTo(final UUID documentId, final String tenantId, final String ownerId) {
+    return documents.findById(documentId)
       .filter(document -> document.getTenantId().equals(tenantId))
       .filter(document -> document.getOwnerId().equals(ownerId));
   }
