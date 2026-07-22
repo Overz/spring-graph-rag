@@ -41,6 +41,14 @@ context: |
   - Definition of Done imutável de qualquer tarefa que implementa RF: os cenários
     @RFxx correspondentes passam com a tag @pendente removida + ModularityTest verde.
 
+  IMPORTANTE — requirements/, plans/, decisions/, technical-debt/ NÃO são
+  artefatos do schema spec-driven (que só conhece proposal/specs/design/tasks):
+  `openspec validate/list/archive/doctor` nunca tocam esses 4 diretórios. Rastreabilidade
+  é disciplina de link, não tooling — todo spec.md e todo proposal/design/tasks
+  novo cita o RF-NN.md/PLAN-NN.md/ADR-NNN.md/TD-NNN.md que usa, sempre de dentro
+  (artefato gerenciado pela CLI) pra fora (artefato não-gerenciado), nunca o
+  inverso. Sem checagem automática — verificação é sweep manual sob demanda.
+
   Convenções de código: records para dados; Lombok @RequiredArgsConstructor em
   serviços; var em locais; erros via ApplicationError/HttpApplicationError
   (ProblemDetail RFC 9457, `code` estável usado pelos BDDs); logging só pelo

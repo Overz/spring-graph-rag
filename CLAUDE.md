@@ -25,6 +25,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Coherence rule: requirements beat everything; BDD and the SDD beat the plan (they were written after it, from the requirements); if code/`compose.yaml` diverge from docs on version/config detail, the repository wins and docs must be updated. Backlog execution state lives in `openspec/changes/` (one change per épico, or per ad-hoc initiative outside épico numbering) — same system as the requirements/plans/decisions/debt above, not a separate layer.
 
+### Traceability workflow (manual — the CLI doesn't manage this)
+
+`requirements/`, `plans/`, `decisions/`, `technical-debt/` are plain markdown the OpenSpec CLI has zero awareness of — its `spec-driven` schema only knows 4 artifact types (`proposal`, `specs`, `design`, `tasks`), so `openspec validate`/`list`/`archive`/`doctor` never touch these folders. Linking discipline instead of tooling:
+
+- Every `openspec/specs/*/spec.md` Purpose cites the `RF-NN.md`(s) it covers — link lives inside the CLI-managed spec, not as a separate pointer file.
+- Every new/touched change's `proposal.md`/`design.md`/`tasks.md` cites the `PLAN-NN.md`, `ADR-NNN.md`, `TD-NNN.md` it touches.
+- Direction is always inward-to-outward: the CLI-managed artifact (spec, change) links out to the unmanaged one (RF/PLAN/ADR/TD) — never the reverse.
+- New RF/RNF → new/edited `RF-NN.md` directly (same as editing the old `requisitos.md`). New durable cross-cutting decision → new `ADR-NNN.md`. Debt accepted during a change → new `TD-NNN.md`, referenced from that change's `design.md`.
+- No automated consistency check exists. Verification is a manual grep-and-read sweep (broken links, stale paths) done on request or after a change that touches several of these files — not run on every commit.
+
 ### Current implementation stage
 
 **Domain code was reset** (July/2026): the earlier upload implementation was removed to restart guided by requirements + BDD. Implementation is now proceeding épico by épico via OpenSpec changes. **Implemented so far: Épico 0 (foundations), Épico 1 (RF01–RF07, ingestion & validation), and Épico 2 (RF08–RF11, document lifecycle).** Baseline that exists since the reset:
