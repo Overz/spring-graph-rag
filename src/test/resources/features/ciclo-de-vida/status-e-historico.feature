@@ -63,3 +63,17 @@ Funcionalidade: Ciclo de vida de processamento e histórico por documento
   Cenário: Consulta de status de documento inexistente
     Quando o usuário consultar o status do documento "00000000-0000-0000-0000-000000000000"
     Então a consulta deve ser rejeitada com um erro de "Documento não encontrado"
+
+  @RF09 @RF10
+  Cenário: Histórico continua acessível após exclusão lógica, com o evento registrado
+    Dado que o arquivo "relatorio-anual.pdf" foi enviado com sucesso
+    Quando o "dev_user" comandar a exclusão do "relatorio-anual.pdf"
+    E o usuário consultar o histórico de processamento do documento
+    Então a consulta deve retornar sucesso mesmo com o documento excluído
+    E a última entrada do histórico deve ter status "DELETED" e detail "Documento excluído logicamente"
+
+  @RF09 @RF30
+  Cenário: Consulta de histórico de documento de outro usuário retorna não encontrado
+    Dado que o "Documento_C" pertence ao usuário "outra_pessoa" do tenant "acme_inc"
+    Quando o "dev_user" consultar o histórico do "Documento_C"
+    Então a consulta deve ser rejeitada com um erro de "Documento não encontrado"

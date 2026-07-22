@@ -310,6 +310,44 @@ public class CicloDeVidaSteps {
     assertThat(ativo).isTrue();
   }
 
+  @Dado("que o arquivo {string} com conteúdo {string} foi enviado com sucesso")
+  public void queOArquivoStringComConteudoStringFoiEnviado(String arquivo, String conteudoAlias) {
+    currentId = uploadArquivo("dev_user", arquivo, SyntheticFiles.deterministicPdf(conteudoAlias)).toString();
+    docIds.put(arquivo, currentId);
+  }
+
+  @Quando("o usuário substituir a versão atual do {string} por conteúdo {string}")
+  public void oUsuarioSubstituirAVersaoAtualDoStringPorConteudo(String documento, String conteudoAlias) {
+    response = substituirVersao(
+      docIds.get(documento), "dev_user", "nova-versao.pdf", SyntheticFiles.deterministicPdf(conteudoAlias));
+    if (response.getStatusCode().value() == 202) {
+      // "versão atual" segue o alias: o id muda a cada substituição aceita (RF10).
+      docIds.put(documento, campo(response, "id"));
+    }
+  }
+
+  @Quando("o usuário substituir a versão atual do {string} por um arquivo com assinatura EICAR")
+  public void oUsuarioSubstituirAVersaoAtualDoStringPorArquivoComEicar(String documento) {
+    response = substituirVersao(docIds.get(documento), "dev_user", "malware.pdf", SyntheticFiles.pdfWithEicar());
+  }
+
+  @Quando("o {string} tentar substituir a versão do {string}")
+  public void oStringTentarSubstituirAVersaoDoString(String usuarioLogico, String documento) {
+    response = substituirVersao(
+      docIds.get(documento), usuarioLogico, "tentativa.pdf", SyntheticFiles.deterministicPdf("tentativa-invasao"));
+  }
+
+  @Entao("a substituição deve ser aceita")
+  public void aSubstituicaoDeveSerAceita() {
+    assertThat(response.getStatusCode().value()).as("corpo=%s", response.getBody()).isEqualTo(202);
+  }
+
+  @Entao("a substituição deve ser rejeitada com o motivo {string}")
+  public void aSubstituicaoDeveSerRejeitadaComOMotivo(String motivoEsperado) {
+    assertThat(response.getStatusCode().value()).as("corpo=%s", response.getBody()).isNotEqualTo(202);
+    assertThat(campo(response, "detail")).as("corpo=%s", response.getBody()).contains(motivoEsperado);
+  }
+
   // ---------------------------------------------------------------- RF08 fork-join + RF09 consulta
 
   @Dado("que o arquivo {string} foi enviado com sucesso")
@@ -494,6 +532,24 @@ public class CicloDeVidaSteps {
   public void aConsultaDeveSerRejeitadaComUmErroDe(String motivo) {
     assertThat(response.getStatusCode().value()).as("corpo=%s", response.getBody()).isEqualTo(404);
     assertThat(campo(response, "detail")).isEqualTo(motivo);
+  }
+
+  @Quando("o {string} consultar o histórico do {string}")
+  public void oStringConsultarOHistoricoDoString(String usuarioLogico, String documento) {
+    response = getHistory(docIds.get(documento), usuarioLogico);
+  }
+
+  @Entao("a consulta deve retornar sucesso mesmo com o documento excluído")
+  public void aConsultaDeveRetornarSucessoMesmoComODocumento() {
+    assertThat(response.getStatusCode().value()).as("corpo=%s", response.getBody()).isEqualTo(200);
+  }
+
+  @Entao("a última entrada do histórico deve ter status {string} e detail {string}")
+  public void aUltimaEntradaDoHistoricoDeveTerStatusEDetail(String statusEsperado, String detailEsperado) {
+    final var entradas = historicoBody();
+    final var ultima = entradas.get(entradas.size() - 1);
+    assertThat(ultima.path("status").asText()).isEqualTo(statusEsperado);
+    assertThat(ultima.path("detail").asText()).isEqualTo(detailEsperado);
   }
 
   // ---------------------------------------------------------------- apoio HTTP

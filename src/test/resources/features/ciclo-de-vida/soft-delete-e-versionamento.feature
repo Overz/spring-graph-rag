@@ -43,3 +43,30 @@ Funcionalidade: Exclusão lógica e substituição de versão
     Quando o "dev_user" comandar a exclusão do "Documento_B"
     Então a operação deve ser negada por falta de permissão
     E o documento deve permanecer com "isActive = true"
+
+  @RF10
+  Cenário: Substituição de versão aceita reverter para conteúdo de uma versão anterior do mesmo documento
+    Dado que o arquivo "ata-reuniao.pdf" com conteúdo "correto" foi enviado com sucesso
+    E o usuário substituir a versão atual do "ata-reuniao.pdf" por conteúdo "errado"
+    Quando o usuário substituir a versão atual do "ata-reuniao.pdf" por conteúdo "correto"
+    Então a substituição deve ser aceita
+
+  @RF10
+  Cenário: Substituição de versão aceita conteúdo já usado em outro documento ativo do mesmo usuário
+    Dado que o arquivo "documento-base.pdf" com conteúdo "conteudo-compartilhado" foi enviado com sucesso
+    E que o arquivo "outro-documento.pdf" foi enviado com sucesso
+    Quando o usuário substituir a versão atual do "outro-documento.pdf" por conteúdo "conteudo-compartilhado"
+    Então a substituição deve ser aceita
+
+  @RF10
+  Cenário: Substituição de versão ainda rejeita arquivo com malware detectado
+    Dado que o arquivo "contrato-atual.pdf" foi enviado com sucesso
+    Quando o usuário substituir a versão atual do "contrato-atual.pdf" por um arquivo com assinatura EICAR
+    Então a substituição deve ser rejeitada com o motivo "MALWARE_DETECTED"
+
+  @RF10 @RF30
+  Cenário: Usuário não pode substituir versão de documento de outro usuário
+    Dado que o "Documento_B" pertence ao usuário "outra_pessoa" do tenant "acme_inc"
+    Quando o "dev_user" tentar substituir a versão do "Documento_B"
+    Então a operação deve ser negada por falta de permissão
+    E o documento deve permanecer com "isActive = true"

@@ -51,13 +51,37 @@ class UploadConfig {
     );
   }
 
+  /**
+   * Cadeia de {@code POST /{id}/versions} (RF10 complemento): igual à de aceite original,
+   * exceto {@link DuplicateFileValidator} — decisão de reenviar conteúdo já usado antes
+   * (ex.: reverter uma versão errada) é do usuário chamando o endpoint explícito de
+   * versionamento, não do sistema bloquear (confirmado com o usuário).
+   */
+  @Bean
+  List<UploadValidator> versionReplacementValidators(
+    final UploadProperties properties,
+    final MalwareScanner malwareScanner,
+    final DocumentCommandApi documents
+  ) {
+    return List.of(
+      new FileSizeValidator(properties),
+      new FilenameValidator(properties),
+      new EmptyFileValidator(),
+      new FileTypeValidator(properties),
+      new StructuralIntegrityValidator(),
+      new QuotaValidator(documents),
+      new MalwareValidator(malwareScanner)
+    );
+  }
+
   @Bean
   DocumentUploadService documentUploadService(
     final List<UploadValidator> uploadValidators,
+    final List<UploadValidator> versionReplacementValidators,
     final DocumentStorage storage,
     final DocumentCommandApi documents
   ) {
-    return new DocumentUploadService(uploadValidators, storage, documents);
+    return new DocumentUploadService(uploadValidators, versionReplacementValidators, storage, documents);
   }
 
   @Bean

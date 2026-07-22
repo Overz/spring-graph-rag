@@ -40,31 +40,34 @@ public class DocumentUploadService {
   private static final ILogger log = LoggerFactory.of(DocumentUploadService.class);
 
   private final List<UploadValidator> validators;
+  private final List<UploadValidator> versionReplacementValidators;
   private final DocumentStorage storage;
   private final DocumentCommandApi documents;
 
   public RegisteredDocument accept(final MultipartFile file, final CallerContext caller) {
-    return documents.registerAcceptedUpload(validateAndStore(file, caller));
+    return documents.registerAcceptedUpload(validateAndStore(file, caller, validators));
   }
 
   /**
    * Substituição de versão (RF10 complemento): mesma cadeia de validação/storage do
-   * aceite original — inclusive {@code DuplicateFileValidator}/{@code QuotaValidator},
-   * que continuam corretos aqui (RF07 é por hash de tenant+owner, não por documento
-   * específico) — só o comando final ao {@code rag} muda.
+   * aceite original, exceto {@code DuplicateFileValidator} — reenviar conteúdo já usado
+   * antes (ex.: reverter uma versão errada) é decisão de quem chama este endpoint
+   * explícito, não algo que o sistema deva bloquear.
    */
   public VersionReplacementResult acceptReplacement(
     final UUID previousDocumentId, final MultipartFile file, final CallerContext caller
   ) {
-    return documents.replaceVersion(previousDocumentId, validateAndStore(file, caller));
+    return documents.replaceVersion(previousDocumentId, validateAndStore(file, caller, versionReplacementValidators));
   }
 
-  private AcceptedUpload validateAndStore(final MultipartFile file, final CallerContext caller) {
+  private AcceptedUpload validateAndStore(
+    final MultipartFile file, final CallerContext caller, final List<UploadValidator> validators
+  ) {
     // Gerado no ato do upload (RF28 complemento) — acompanha o documento pipeline afora.
     final var correlationId = UUID.randomUUID().toString();
     final var candidate = spool(file, caller);
     try {
-      runValidations(candidate, correlationId);
+      runValidations(candidate, correlationId, validators);
 
       final var documentId = UUID.randomUUID();
       final var location = new StorageLocation(
@@ -93,7 +96,9 @@ public class DocumentUploadService {
     }
   }
 
-  private void runValidations(final UploadCandidate candidate, final String correlationId) {
+  private void runValidations(
+    final UploadCandidate candidate, final String correlationId, final List<UploadValidator> validators
+  ) {
     try {
       validators.forEach(validator -> validator.validate(candidate));
     } catch (UploadRejectedException rejection) {
