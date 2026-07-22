@@ -167,7 +167,7 @@ services:
     networks:
       - app
 
-  # Motor de busca vetorial (k-NN) + full-text (BM25) — ver docs/rag-plan.md Épico 7.
+  # Motor de busca vetorial (k-NN) + full-text (BM25) — ver openspec/plans/PLAN-07.md.
   # No Linux, rode antes de subir: sudo sysctl -w vm.max_map_count=262144
   opensearch:
     image: 'opensearchproject/opensearch:3.7.0'
@@ -185,7 +185,7 @@ services:
       discovery.type: single-node
       plugins.security.disabled: "true" # ok para dev local; nunca em produção
       # Heap reduzido pra caber no limit acima — está bem abaixo do 1g sugerido no
-      # rag-plan.md; suficiente pro volume de teste de um caso de estudo local.
+      # plano original; suficiente pro volume de teste de um caso de estudo local.
       OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
       # O entrypoint roda o instalador da demo config mesmo com o security plugin
       # desabilitado acima e aborta o start exigindo senha forte — pular a demo config.
@@ -374,7 +374,7 @@ services:
     networks:
       - app
 
-  # Runtime de LLM local. Modelo do projeto: qwen3:8b (rag-plan.md Épico 0.2/3.2) — cabe
+  # Runtime de LLM local. Modelo do projeto: qwen3:8b (openspec/plans/PLAN-00.md [0.2], PLAN-03.md [3.2]) — cabe
   # confortavelmente em 8GB de VRAM (quantização Q4) e é o mais consistente em tool calling
   # entre os testados no plano, requisito direto pro MCP local que vai rodar em cima dele.
   # Pré-requisito no host: nvidia-container-toolkit instalado e configurado para o Docker.

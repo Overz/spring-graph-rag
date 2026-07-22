@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Fatia do **RF35** (identidade): login de usuário final via padrão Phantom Token (Redis) — a API emite/renova/revoga um token opaco em vez do JWT cru do Keycloak, mantendo o mesmo `CallerContext` do caminho JWT direto (capability irmã `autenticacao`). Realm `graphrag` e `grant_type` fixos por endpoint (password no login, refresh_token no refresh) — só usuário final, os service accounts client_credentials do MCP não passam por aqui. Validada por `src/test/resources/features/seguranca/autenticacao-e-criptografia.feature` (`@RF35`). Design: `docs/adr/ADR-004-phantom-token-login.md`.
+Fatia do [RF-35](../../requirements/RF-35.md) (identidade): login de usuário final via padrão Phantom Token (Redis) — a API emite/renova/revoga um token opaco em vez do JWT cru do Keycloak, mantendo o mesmo `CallerContext` do caminho JWT direto (capability irmã `autenticacao`). Realm `graphrag` e `grant_type` fixos por endpoint (password no login, refresh_token no refresh) — só usuário final, os service accounts client_credentials do MCP não passam por aqui. Validada por `src/test/resources/features/seguranca/autenticacao-e-criptografia.feature` (`@RF35`). Design: [ADR-004](../../decisions/ADR-004.md). Débito conhecido: [TD-003](../../technical-debt/TD-003.md) (sem rate limiting no login).
 
 ## Requirements
 

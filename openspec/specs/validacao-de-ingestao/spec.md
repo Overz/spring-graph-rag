@@ -2,7 +2,7 @@
 
 ## Purpose
 
-RF02 (+ complemento de malware), RF04, RF07 (`docs/requisitos.md`): cadeia de validação de upload, tipos de arquivo suportados, integridade estrutural, varredura antimalware e idempotência por hash. Validada por `src/test/resources/features/ingestao/validacao.feature`. Design: `docs/sdd/ingestao.md` §§2–3.
+[RF-02](../../requirements/RF-02.md) (+ complemento de malware), [RF-04](../../requirements/RF-04.md), [RF-07](../../requirements/RF-07.md): cadeia de validação de upload, tipos de arquivo suportados, integridade estrutural, varredura antimalware e idempotência por hash. Validada por `src/test/resources/features/ingestao/validacao.feature`. Design: `docs/sdd/ingestao.md` §§2–3.
 
 ## Requirements
 
@@ -49,7 +49,7 @@ O sistema SHALL executar verificação estrutural leve por formato, **após** a 
 - **THEN** rejeitado com "Arquivo corrompido" (ver `validacao.feature`)
 
 ### Requirement: Varredura de malware atrás de porta
-A cadeia SHALL submeter o arquivo à porta `MalwareScanner` como última validação; detecção rejeita com `422` e `code = MALWARE_DETECTED`, sem consumir cota de reprocessamento e sem gravar em `/raw` (RF02 complemento). Neste change a implementação é **mock determinístico**: detecta apenas a assinatura de teste EICAR, qualquer outro conteúdo é limpo — a integração ClamAV real (clamd) é débito registrado para épico futuro, trocando somente o adaptador.
+A cadeia SHALL submeter o arquivo à porta `MalwareScanner` como última validação; detecção rejeita com `422` e `code = MALWARE_DETECTED`, sem consumir cota de reprocessamento e sem gravar em `/raw` (RF02 complemento). Neste change a implementação é **mock determinístico**: detecta apenas a assinatura de teste EICAR, qualquer outro conteúdo é limpo — a integração ClamAV real (clamd) é débito registrado ([TD-001](../../technical-debt/TD-001.md)), trocando somente o adaptador.
 
 #### Scenario: Assinatura EICAR detectada (@RF02)
 - **WHEN** upload de "boleto.pdf" contendo a assinatura EICAR

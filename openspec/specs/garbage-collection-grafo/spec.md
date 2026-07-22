@@ -1,7 +1,11 @@
 # garbage-collection-grafo Specification
 
 ## Purpose
-TBD - created by archiving change epico-2-ciclo-de-vida. Update Purpose after archive.
+Expurgar fisicamente (hard delete) entidades e relacionamentos órfãos do grafo
+de conhecimento — nós de `Entity` que perderam toda conexão com um chunk ativo
+depois de uma ou mais exclusões lógicas (RF10) — para não deixar o Neo4j
+acumulando lixo indefinidamente (RF11).
+
 ## Requirements
 ### Requirement: Expurgo físico de entidades órfãs
 

@@ -291,7 +291,7 @@ Se o circuito do Ollama estiver aberto (RF37): a consulta **degrada** — retorn
 | Extensão | Costura prevista | Gatilho para ativar |
 |---|---|---|
 | **SSE/streaming** (ADL-009) | `AnswerGenerationService` já separa *retrieval* de *geração*; um endpoint SSE novo consome o mesmo pipeline com `ChatModel.stream(...)`, emitindo evento terminal com citações | Existir um consumidor visual (UI) |
-| **Conversação multi-turno** (ADL-007) | Contrato de sessão (`sessionId` opcional no request), camada de contexto conversacional entre `QueryController` e `RagQueryApi` (carrega histórico), reescrita de consulta (condensar histórico + pergunta antes do retrieval) — o retrieval e a geração atuais não mudam | RF novo de chat em `requisitos.md` |
+| **Conversação multi-turno** (ADL-007) | Contrato de sessão (`sessionId` opcional no request), camada de contexto conversacional entre `QueryController` e `RagQueryApi` (carrega histórico), reescrita de consulta (condensar histórico + pergunta antes do retrieval) — o retrieval e a geração atuais não mudam | RF novo de chat em `openspec/requirements/` |
 | **NATS** (ADL-004) | Listeners de etapa consomem eventos Modulith hoje; a transição troca o transporte (binder/cliente NATS) mantendo os mesmos contratos de evento de `dados.md`; fair queueing por partição de tenant (RF39) | Épico 3 ([3.4]) |
 | **Troca do modelo de embedding** (ADL-003) | `EmbeddingModel` é a porta; dimensão do índice OpenSearch parametrizada — troca exige reindexação completa (processo em `resiliencia-e-operacao.md`) | Golden set reprovar `nomic-embed-text` em pt-BR ([5.4]) |
 | **Fallback do GLiNER** (ADL-006) | `NerClient` é porta; implementação alternativa delega ao `ChatModel` com structured output | Spike do GLiNER falhar |

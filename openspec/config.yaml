@@ -8,22 +8,36 @@ context: |
   Infra 100% local e gratuita via compose.yaml (Postgres, Neo4j, OpenSearch,
   MinIO+JuiceFS+Redis, Ollama, Docling, LGTM; Keycloak/ClamAV/NATS/GLiNER por épico).
 
-  Hierarquia de documentação (ordem de autoridade — cronologia real:
-  rag-plan veio primeiro; depois RF/RNF; depois BDD; depois SDD):
-  - docs/requisitos.md — O QUÊ: RF01–RF39 + RNF01–04; fonte principal,
-    nenhum escopo existe fora deles.
-  - src/test/resources/features/ — QUANDO PRONTO: 23 features Gherkin pt-BR
-    derivadas dos RFs, tags @RFxx, todas @pendente; runner filtra `not @pendente`.
-  - docs/sdd.md + docs/sdd/ — COMO: o design mais recente; dados.md SUBSTITUI
-    a seção 7 do rag-plan.
-  - docs/adr/ — POR QUÊ: decisões pontuais.
-  - docs/rag-plan.md — só ORDEM dos épicos/tarefas [N.M]; doc mais antigo,
-    detalhes técnicos nele podem estar desatualizados — conferir no SDD/repositório.
+  Hierarquia de documentação (openspec/ é a fonte única da verdade desde
+  22/jul/2026 — migração de docs/requisitos.md, docs/rag-plan.md e docs/adr/,
+  que não existem mais):
+  - openspec/requirements/RF-NN.md + RNF-NN.md — O QUÊ: um arquivo por
+    requisito (RF-01–RF-40, RNF-01–04); fonte principal, nenhum escopo existe
+    fora deles. Sub-variantes (revisão/complemento) ficam dentro do arquivo do
+    RF pai, não são arquivo próprio.
+  - src/test/resources/features/ — QUANDO PRONTO: features Gherkin pt-BR
+    derivadas dos RFs, tags @RFxx; runner filtra `not @pendente`.
+  - docs/sdd.md + docs/sdd/ — COMO: o design mais recente (não migrado — não é
+    requisito nem plano nem decisão pontual, é referência viva de arquitetura).
+  - openspec/decisions/ADR-NNN.md — POR QUÊ: decisões pontuais duráveis e
+    cross-cutting. Decisões escopadas a um único change continuam no próprio
+    `design.md` desse change, não viram ADR global.
+  - openspec/plans/PLAN-NN.md — só ORDEM dos épicos/tarefas [N.M], um arquivo
+    por épico (PLAN-00–PLAN-10, número = número do épico); doc mais antigo em
+    espírito, detalhes técnicos nele podem estar desatualizados — conferir no
+    SDD/repositório. `openspec/plans/README.md` guarda roadmap/riscos/referências
+    transversais que não pertencem a um épico específico.
+  - openspec/technical-debt/TD-NNN.md — débito técnico aberto (mock em vez de
+    integração real, decisão de escopo aceita, risco não mitigado): origem,
+    mitigação atual, resolução planejada.
 
-  Papel do OpenSpec neste projeto: camada de EXECUÇÃO do backlog.
-  - Um change por épico do rag-plan.md.
-  - openspec/specs/ NÃO duplica requisitos.md: cresce só via archive e registra
-    o que está de fato implementado.
+  Papel do OpenSpec neste projeto: fonte única da verdade E camada de EXECUÇÃO
+  do backlog — mesmo sistema, sem duplicação entre "documentação" e "backlog".
+  - Um change por épico (ou por iniciativa ad-hoc fora da numeração de épico,
+    ex.: auth-phantom-token, listagem-de-documentos).
+  - openspec/specs/ cresce só via archive e registra o que está de fato
+    implementado (não muda de papel com esta migração — specs continuam
+    nomeadas por capability, não por número).
   - Definition of Done imutável de qualquer tarefa que implementa RF: os cenários
     @RFxx correspondentes passam com a tag @pendente removida + ModularityTest verde.
 
@@ -34,14 +48,20 @@ context: |
 
 rules:
   proposal:
-    - Referenciar o épico e as tarefas [N.M] do docs/rag-plan.md que o change cobre
-    - Não inventar escopo fora dos RFs; citar os RFxx envolvidos
+    - Referenciar o(s) PLAN-NN.md e as tarefas [N.M] que o change cobre
+    - Não inventar escopo fora dos RFs; citar os RF-NN.md envolvidos
   specs:
-    - Cada requirement cita os RFxx e o arquivo .feature que o valida
+    - Cada requirement cita os RF-NN.md e o arquivo .feature que o valida
     - Não reescrever os cenários Gherkin — resumir WHEN/THEN e apontar para a feature
   design:
     - Apontar para o documento docs/sdd/*.md correspondente em vez de copiá-lo;
       registrar aqui apenas decisões novas tomadas durante o change
+    - Decisão nova que seja durável/cross-cutting (não só deste change) vira
+      ADR em openspec/decisions/, não fica só no design.md
   tasks:
-    - Espelhar a ordenação [N.M] do rag-plan.md, mas puxar todo detalhe técnico
-      (schemas, DoDs, caminhos) do SDD e do repositório, nunca do plano
+    - Espelhar a ordenação [N.M] do PLAN-NN.md correspondente, mas puxar todo
+      detalhe técnico (schemas, DoDs, caminhos) do SDD e do repositório, nunca do plano
+  technical-debt:
+    - Todo débito aceito conscientemente durante um change (mock em vez de
+      integração real, risco não mitigado, escopo cortado) vira TD-NNN.md,
+      referenciado pelo proposal/design do change que o originou

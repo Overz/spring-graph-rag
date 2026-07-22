@@ -1,0 +1,16 @@
+# PLAN-02 — Ciclo de Vida do Documento (RF08–RF11)
+
+> *Features:* `ciclo-de-vida/status-e-historico.feature`, `ciclo-de-vida/soft-delete-e-versionamento.feature`, `ciclo-de-vida/garbage-collection.feature`
+> *User story:* como usuário, quero acompanhar cada documento do recebimento à conclusão — e excluir/substituir sem corromper o que outros documentos compartilham.
+
+> **Atualização (julho/2026): Épico 2 concluído** — change `openspec/changes/archive/epico-2-ciclo-de-vida`. RF08–RF11 implementados: `DocumentLifecycleService` como único ponto de escrita de status, consulta `GET /api/v1/documents/{id}/{status,history}` (RF09), `DELETE /api/v1/documents/{id}` com exclusão lógica síncrona (Postgres + Neo4j + OpenSearch, RF10), `POST /api/v1/documents/{id}/versions` para substituição de versão, e `EntityGarbageCollectionJob` (`@Scheduled`, RF11). Schema Neo4j (constraints mínimas `document_id`/`chunk_id`/`entity_id` + índice `chunk_tenant_active`) e índice OpenSearch `chunks-v1`/alias `chunks` criados via `ApplicationRunner` idempotente — população real fica para os Épicos 5/6; os cenários de RF08 (fork-join) e RF10/RF11 (grafo/vetor) fixturam esse estado direto nos steps `Dado` (design.md D1), mesmo padrão do `SyntheticFiles` do Épico 1. **Descoberta na implementação:** o mecanismo de derivação de `@Query` custom do Spring Data Neo4j 8.1.0 se mostrou instável (NPE numa query com subquery `EXISTS`, no-op silencioso noutra com `WITH`/`OPTIONAL MATCH` encadeados) — `DocumentGraphRepository`/`EntityGraphRepository` viraram classes escritas à mão sobre `Neo4jClient`, não `Neo4jRepository` com `@Query` (mesmo padrão do `OpenSearchChunkIndex`). Soft-delete é síncrono, não event-driven — débito documentado em `sdd/dados.md` §5 pro Épico 3. **Corrigido pós-implementação:** a exclusão só marcava `is_active=false` sem tocar `document_status_history`/consultas de status — `softDelete` agora grava uma linha de auditoria (status inalterado, `detail` explica o evento) e `statusOf`/`historyOf`/`deleteDocument`/`replaceVersion` passam a filtrar `isActive=true`, respondendo "não encontrado" pra documento excluído dali em diante.
+
+**[2.1] Máquina de estados com fork-join** `[G · Must]` — implementar o ciclo do RF08 com sub-estados `embeddingStatus`/`graphStatus` e derivação `COMPLETED`/`PARTIALLY_COMPLETED`/`FAILED`. É a espinha dorsal que os épicos 3–6 preenchem.
+
+**[2.2] Status e histórico** `[M · Must]` — consulta de status atual e histórico completo de transições por arquivo (RF09); documento inexistente responde not-found limpo.
+
+**[2.3] Soft delete com isolamento de grafo** `[M · Must]` — exclusão marca `isActive=false` no `Document` e `Chunks` (Neo4j) e inativa os vetores (OpenSearch); entidades/relacionamentos referenciados por outros documentos ativos permanecem intactos (RF10). Exclusão de documento alheio é negada (RF30).
+
+**[2.4] Substituição de versão** `[M · Should]` — nova versão reprocessa o pipeline completo; a anterior segue o fluxo de soft delete; diffing incremental fica como otimização futura (RF10 complemento).
+
+**[2.5] Garbage collection de órfãos** `[M · Should]` — job em background remove fisicamente entidades/relacionamentos sem conexão com nenhum chunk ativo (RF11); entidade com ao menos um chunk ativo é preservada.

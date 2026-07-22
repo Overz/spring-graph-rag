@@ -1,6 +1,6 @@
 # Modelo de Dados e Contratos de Evento
 
-> Parte do [SDD](../sdd.md). Fonte de referência dos schemas (PostgreSQL, OpenSearch, Neo4j), do catálogo de eventos de domínio e das convenções de identificadores. Detalha e substitui o esboço da seção 7 do [`rag-plan.md`](../rag-plan.md).
+> Parte do [SDD](../sdd.md). Fonte de referência dos schemas (PostgreSQL, OpenSearch, Neo4j), do catálogo de eventos de domínio e das convenções de identificadores. Detalha e substitui o esboço original do plano de épicos (seção "Modelo de Dados", hoje removida — este documento é a fonte de verdade).
 
 ---
 

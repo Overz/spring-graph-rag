@@ -2,7 +2,7 @@
 
 ## Purpose
 
-RF01, RF03, RF05, RF06 (`docs/requisitos.md`): upload autenticado de documentos, resposta assíncrona, armazenamento segregado por tenant/usuário, metadados/histórico persistidos e limites de tamanho e cota. Validada por `src/test/resources/features/ingestao/upload.feature`. Design: `docs/sdd/ingestao.md` §§1, 4, 5.
+[RF-01](../../requirements/RF-01.md), [RF-03](../../requirements/RF-03.md), [RF-05](../../requirements/RF-05.md), [RF-06](../../requirements/RF-06.md): upload autenticado de documentos, resposta assíncrona, armazenamento segregado por tenant/usuário, metadados/histórico persistidos e limites de tamanho e cota. Validada por `src/test/resources/features/ingestao/upload.feature`. Design: `docs/sdd/ingestao.md` §§1, 4, 5.
 
 ## Requirements
 

@@ -26,7 +26,7 @@ Estado atual: 23 features, todas `@pendente`; o runner filtra `not @pendente` (b
 3. Remover `@pendente` do cenário (ou da feature, quando toda ela passar).
 4. `./mvnw test` — o cenário executa e precisa passar; `ModularityTest` continua guardando fronteiras.
 
-**DoD padrão de toda tarefa do backlog:** cenários `@RFxx` correspondentes passando sem `@pendente` (regra do [`rag-plan.md`](../rag-plan.md) §6).
+**DoD padrão de toda tarefa do backlog:** cenários `@RFxx` correspondentes passando sem `@pendente` (regra dos [planos por épico](../../openspec/plans/)).
 
 Infra das steps quando o contexto Spring for necessário: classe `@CucumberContextConfiguration` + `@SpringBootTest(webEnvironment = RANDOM_PORT)` no pacote `com.github.overz.bdd`, importando a `TestcontainersConfiguration` — `cucumber-spring` já está no classpath.
 
