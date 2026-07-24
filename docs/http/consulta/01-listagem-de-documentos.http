@@ -1,0 +1,25 @@
+### RF40 — Listagem paginada de documentos do tenant
+### GET /api/v1/documents — qualquer usuário autenticado do tenant (SecurityConfig:
+### anyRequest().authenticated()); visão compartilhada, não restrita ao dono de cada
+### documento (mesma regra de RF09 revisado).
+### Token: rode docs/http/keycloak/01-obter-token.http e cole o access_token abaixo.
+
+@baseUrl = http://localhost:8090
+@token = COLE_AQUI_O_ACCESS_TOKEN
+
+### Listagem padrão (200) — apenas documentos ativos, paginação default
+### (page=0, size=20, sort=uploadedAt,DESC)
+GET {{baseUrl}}/api/v1/documents
+Authorization: Bearer {{token}}
+
+### Incluindo documentos excluídos logicamente (200) — includeInactive=true;
+### item com status DELETED aparece com active=false
+GET {{baseUrl}}/api/v1/documents?includeInactive=true
+Authorization: Bearer {{token}}
+
+### Paginação e ordenação customizadas (200)
+GET {{baseUrl}}/api/v1/documents?page=1&size=5&sort=filename,ASC
+Authorization: Bearer {{token}}
+
+### Sem token — espera 401
+GET {{baseUrl}}/api/v1/documents
